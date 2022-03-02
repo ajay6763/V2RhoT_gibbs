@@ -5,7 +5,7 @@ Look-up tables are generated using a module of LitMod2D_2.0 (https://github.com/
 for new composition please follow the instruction ii LitMod2D_2.0. You do not need to have the whole installation of the LitMod2D_2.0 just the Generator part (written below).
 
 
-Info Perplex based program to produce thermophysical properties look-table used in LitMod2D_2.0
+Program to produce thermophysical properties look-table used in LitMod2D_2.0
 
 ** To run this program in Linux based platform you need to install "wine" . This allows you to run *.exe files.
 
@@ -21,4 +21,4 @@ After you have done as suggested above, you run "Generator_LINUX" from the same 
 
 then "./Generator_LINUX"
 
-After type enter a command prompt will appear and you will be asked certain question which answer and thermophysical property tables will put in the Build_dat_(name of the run you gave). Inside this folder there will be a file called TABLE_LITMOD_no_atten copy this file into the database folder and rename such that you can identify it e.g. 98,97 etc. 
+After type enter command a command prompt will appear and you will be asked certain question that you answer and thermophysical property tables will be put in the Build_dat_(name of the run you gave). Inside this folder there will be a file called TABLE_LITMOD_no_atten copy this file into the database folder and rename such that you can identify it e.g. 98,97 etc. 
