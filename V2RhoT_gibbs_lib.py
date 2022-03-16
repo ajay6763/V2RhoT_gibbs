@@ -4,6 +4,15 @@ from matplotlib.tri import Triangulation
 from scipy import interpolate
 import math
 
+########################################
+# Defining pressure function based on Ak133
+# I choose ak135 becaouse the pressures from the LitMod2D_2.0 ref model
+# are practically similar to ak135
+########################################
+ak135 = np.loadtxt('./databases/ak135f.txt',skiprows=1+2)
+ak135_P = 9.8*ak135[:,0]*1e3*ak135[:,1]*1e3*1e-5
+pressure_inter = interpolate.interp1d(ak135[:,0],ak135_P)
+
 def lookup_P_T(V,P,table):
 	index=[]
     #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
@@ -217,20 +226,14 @@ def velocity_melt_correction_crust(T,P,Vp,Vs):
     
     return Vp_corrected,Vs_corrected, melt_frac
 
-########################################
-# Defining pressure function based on Ak133
-# I choose ak135 becaouse the pressures from the LitMod2D_2.0 ref model
-# are practically similar to ak135
-########################################
-ak135 = np.loadtxt('./databases/ak135f.txt',skiprows=1+2)
-ak135_P = 9.8*ak135[:,0]*1e3*ak135[:,1]*1e3*1e-5
-pressure_inter = interpolate.interp1d(ak135[:,0],ak135_P)
+
 
 
 
 def vel_to_temp(tomo,Table):
     Temperature_out = []#np.zeros_like(tomo[:,1])
     Density_out     = []#np.zeros_like(tomo[:,1])
+    diff_Vs         = []
     #Vp_out          = []#np.zeros_like(tomo[:,1])
     #Vs_out          = []#np.zeros_like(tomo[:,1])
     for i in range(len(tomo)):
@@ -241,11 +244,13 @@ def vel_to_temp(tomo,Table):
         #Vs_out.append(vs)
         Temperature_out.append(temp)
         Density_out.append(dens)
+	# difference between observed and projected Vs
+	diff_Vs.append(Vs_in-vs)
     ### pasting the outputs to the input tomo table
     out=tomo;
     out=np.column_stack((out,Temperature_out))    
     out=np.column_stack((out,Density_out))    
-
+    out=np.column_stack((out,diff_Vs))
     return out
 
 
