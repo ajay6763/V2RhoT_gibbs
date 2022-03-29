@@ -84,7 +84,7 @@ def lookup_vs_P_accurate(vs,P,table):
         T=-273.0+(table[index,0]+table[index+1,0])/2
         
         #print index, T_LitMod,P_LitMod
-    return T,Dens,Vp,Vs
+    return table[index,1],T,Dens,Vp,Vs
 
 def atten_correction(T,P,Vp,Vs,oscill,grain_size):
     ## Parameters from Jackson and Faule 2010, Kumar et al., 2020
@@ -229,28 +229,54 @@ def velocity_melt_correction_crust(T,P,Vp,Vs):
 
 
 
-
-def vel_to_temp(tomo,Table):
+'''
+def vel_to_temp(depth,Vs,Table):
     Temperature_out = []#np.zeros_like(tomo[:,1])
     Density_out     = []#np.zeros_like(tomo[:,1])
     diff_Vs         = []
     #Vp_out          = []#np.zeros_like(tomo[:,1])
     #Vs_out          = []#np.zeros_like(tomo[:,1])
-    for i in range(len(tomo)):
-        P  = pressure_inter(tomo[i,2])
-        Vs_in = tomo[i,3]
-        temp,dens,vp,vs=lookup_vs_P_accurate(Vs_in,P.tolist(),Table)
+    for i in range(len(depth)):
+        P  = pressure_inter(depth[i])
+        Vs_in = Vs[i]
+        temp,dens,vp,vs,ind=lookup_vs_P_accurate(Vs_in,P.tolist(),Table)
         #Vp_out.append(vp)
         #Vs_out.append(vs)
         Temperature_out.append(temp)
         Density_out.append(dens)
-	# difference between observed and projected Vs
-	diff_Vs.append(Vs_in-vs)
+        diff_Vs.append(Vs_in-vs)
     ### pasting the outputs to the input tomo table
-    out=tomo;
+    out=depth;
     out=np.column_stack((out,Temperature_out))    
-    out=np.column_stack((out,Density_out))    
-    out=np.column_stack((out,diff_Vs))
+    out=np.column_stack((out,Density_out))
+    out=np.column_stack((out,diff_Vs))    
+
+    return out
+'''
+def vel_to_temp(depth,Vs,Table):
+    Temperature_out = []#np.zeros_like(tomo[:,1])
+    Density_out     = []#np.zeros_like(tomo[:,1])
+    diff_Vs         = []
+    P_out           = []
+    #Vp_out          = []#np.zeros_like(tomo[:,1])
+    #Vs_out          = []#np.zeros_like(tomo[:,1])
+    for i in range(len(depth)):
+        P  = pressure_inter(depth[i])
+        Vs_in = Vs[i]
+        P_table,temp,dens,vp,vs=lookup_vs_P_accurate(Vs_in,P.tolist(),Table)
+        #Vp_out.append(vp)
+        #Vs_out.append(vs)
+        P_out.append(P_table)
+        Temperature_out.append(temp)
+        Density_out.append(dens)
+        diff_Vs.append(Vs_in-vs)
+    ### pasting the outputs to the input tomo table
+    out=depth;
+    out=np.column_stack((out,P_out))    
+    out=np.column_stack((out,Temperature_out))    
+    out=np.column_stack((out,Density_out))
+    out=np.column_stack((out,diff_Vs))    
+
     return out
 
 

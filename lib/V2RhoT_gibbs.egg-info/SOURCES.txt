@@ -1,6 +1,0 @@
-setup.py
-V2RhoT_gibbs.egg-info/PKG-INFO
-V2RhoT_gibbs.egg-info/SOURCES.txt
-V2RhoT_gibbs.egg-info/dependency_links.txt
-V2RhoT_gibbs.egg-info/requires.txt
-V2RhoT_gibbs.egg-info/top_level.txt
