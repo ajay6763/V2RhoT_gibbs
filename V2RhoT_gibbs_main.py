@@ -5,7 +5,7 @@ from scipy import interpolate
 import math
 import time
 import V2RhoT_gibbs_lib as lib
-
+systime = time.time()
 ########################################
 # Loading perplex tables
 ########################################
@@ -57,7 +57,7 @@ pressure_inter = interpolate.interp1d(ak135[:,0],ak135_P)
 # data format
 # age(Ma) depth(km) Vs(km/s)
 # 
-tomo_NA_stack = np.loadtxt('./data_tomo/NA_age_vel_stack.dat',comments='#')
+tomo_NA_stack = np.loadtxt('./data_tomo/V_mean.txt',comments='#')
 
 ################################################
 # Doing the conversion
@@ -76,9 +76,11 @@ print("\n Total time taken to run: seconds",end_time-start_time)
 ################################################
 out_save=np.zeros_like(tomo_NA_stack[:,1])
 out_save=tomo_NA_stack[:,0]
+out_save=np.column_stack((out_save,out_gibbs[:,1]))
 out_save=np.column_stack((out_save,out_gibbs[:,0]))
 out_save=np.column_stack((out_save,out_gibbs[:,1]))
 out_save=np.column_stack((out_save,out_gibbs[:,2]))
 out_save=np.column_stack((out_save,out_gibbs[:,3]))
 out_save=np.column_stack((out_save,out_gibbs[:,4]))
 np.savetxt('NA_Age_vel_converted.txt',out_save,header="#Age(Myr) depth(km) Pressure(bar) Temperature(oC) Density(kg/m3) Vs_diff(km/s)",comments='',fmt='%10.3f')
+print("Total execution time: {:.1f} min".format((time.time()-systime)/60.0))

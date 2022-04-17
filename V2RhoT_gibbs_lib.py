@@ -184,49 +184,98 @@ def velocity_melt_correction_mantle(T,P,Vp,Vs):
     ## get the melt fraction at the P and T
     melt_frac = melt_frac_mantle(T,P)
     #########################
-    # Vp:   -5.3 = dlnVs/%melt => dlnVs = -5.3 * %melt 
-    # Vs:   -2.4 = dlnVp/%melt => dlnVp = -2.3 * %melt
+    # Vs:   -5.3 = dlnVs/%melt => dlnVs = -5.3 * %melt 
+    # Vp:   -2.4 = dlnVp/%melt => dlnVp = -2.3 * %melt
     '''
-    dVp = np.exp(-5.3 * melt_frac) 
-    dVs = np.exp(-2.3 * melt_frac)
+    dVs = np.exp(-5.3 * melt_frac) 
+    dVp = np.exp(-2.3 * melt_frac)
     Vp_corrected = Vp - dVp
     Vs_corrected = Vs - dVs
     '''
     if melt_frac > 0:
-        dVp = np.exp(-5.3 * melt_frac)
-        dVs = np.exp(-2.3 * melt_frac)
-        Vp_corrected = Vp - dVp
-        Vs_corrected = Vs - dVs
+        dVs = -5.3 * melt_frac*100
+        dVp = -2.3 * melt_frac*100
+        Vp_corrected = Vp + (dVp*Vp)/100
+        Vs_corrected = Vs + (dVs*Vs)/100
     else:
         Vp_corrected = Vp
         Vs_corrected = Vs
-    
-    return Vp_corrected,Vs_corrected, melt_frac
+        melt_frac    = 0.
+    return Vp_corrected,Vs_corrected, melt_frac*100
 
 def velocity_melt_correction_crust(T,P,Vp,Vs):
     ## get the melt fraction at the P and T
     melt_frac = melt_frac_crust(T,P)
     #########################
-    # Vp:   -5.3 = dlnVs/%melt => dlnVs = -5.3 * %melt 
-    # Vs:   -2.4 = dlnVp/%melt => dlnVp = -2.3 * %melt
+    # Vs:   -5.3 = dlnVs/%melt => dlnVs = -5.3 * %melt 
+    # Vp:   -2.4 = dlnVp/%melt => dlnVp = -2.3 * %melt
     '''
-    dVp = np.exp(-5.3 * melt_frac) 
-    dVs = np.exp(-2.3 * melt_frac)
+    dVs = np.exp(-5.3 * melt_frac) 
+    dVp = np.exp(-2.3 * melt_frac)
     Vp_corrected = Vp - dVp
     Vs_corrected = Vs - dVs
     '''
     if melt_frac > 0:
-        dVp = np.exp(-5.3 * melt_frac)
-        dVs = np.exp(-2.3 * melt_frac)
-        Vp_corrected = Vp - dVp
-        Vs_corrected = Vs - dVs
+        dVs = -5.3 * melt_frac*100
+        dVp = -2.3 * melt_frac*100
+        Vp_corrected = Vp + (dVp*Vp)/100
+        Vs_corrected = Vs + (dVs*Vs)/100
     else:
         Vp_corrected = Vp
         Vs_corrected = Vs
+        melt_frac    = 0.
+    return Vp_corrected,Vs_corrected, melt_frac*100
+
+def lookup_vs_P_accurate_prop(vs,P,table):
+    '''
+    This function is a bit accurate than the minimum of the L2 norm.
+    So, what I am doing is that first I look for the minimum of the L2 norm, then
+    I look for the difference between the observed velocity and node above and below.
+    In case if the L2 norm give "bulls eye" hit where observed velocity matches the 
+    node velocity I pick the properties from that node. If not then I ask which way,
+    up of down, difference between the observed and node velocity is minimum and
+    take the average of the properties at the minimum L2 norm node and up or down node.
+    '''
+    index=[]
+    Vp=[]
+    Vs=[]
+    Dens=[]
+    T=[]
+    P_out=[]
+    melt=[]
+    #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
+    dist=np.array(((vs-table[:,4])**2+(P-table[:,1])**2));
+    index=dist.argmin();
     
-    return Vp_corrected,Vs_corrected, melt_frac
+    diff_vs=table[index,4] - vs
+    diff_vs_up=table[index-1,4] - vs
+    diff_vs_down=table[index+1,4] - vs
 
-
+    if diff_vs==0:
+        T=table[index,0]-273.0
+        P_out=table[index,1]
+        Dens=table[index,2]
+        Vp=table[index,3]
+        Vs=table[index,4]
+        melt=table[index,5]
+    elif diff_vs_up<diff_vs_down:
+        T=-273.0+(table[index,0]+table[index-1,0])/2
+        P_out=(table[index,1]+table[index-1,1])/2
+        Dens=(table[index,2]+table[index-1,2])/2
+        Vp=(table[index,3]+table[index-1,3])/2
+        Vs=(table[index,4]+table[index-1,4])/2
+        melt=(table[index,5]+table[index-1,5])/2
+        
+    else:
+        T=-273.0+(table[index,0]+table[index+1,0])/2
+        P_out=(table[index,1]+table[index+1,1])/2
+        Dens=(table[index,2]+table[index+1,2])/2
+        Vp=(table[index,3]+table[index+1,3])/2
+        Vs=(table[index,4]+table[index+1,4])/2
+        melt=(table[index,5]+table[index+1,5])/2
+        
+        #print index, T_LitMod,P_LitMod
+    return P_out,T,Dens,Vp,Vs,melt
 
 
 '''
@@ -279,6 +328,32 @@ def vel_to_temp(depth,Vs,Table):
 
     return out
 
+
+def vel_to_temp_P_in(depth,Vs,Table,P_func):
+    Temperature_out = []#np.zeros_like(tomo[:,1])
+    Density_out     = []#np.zeros_like(tomo[:,1])
+    diff_Vs         = []
+    P_out           = []
+    #Vp_out          = []#np.zeros_like(tomo[:,1])
+    #Vs_out          = []#np.zeros_like(tomo[:,1])
+    for i in range(len(depth)):
+        P  = P_func(depth[i])
+        Vs_in = Vs[i]
+        P_table,temp,dens,vp,vs=lookup_vs_P_accurate(Vs_in,P.tolist(),Table)
+        #Vp_out.append(vp)
+        #Vs_out.append(vs)
+        P_out.append(P_table)
+        Temperature_out.append(temp)
+        Density_out.append(dens)
+        diff_Vs.append(Vs_in-vs)
+    ### pasting the outputs to the input tomo table
+    out=depth;
+    out=np.column_stack((out,P_out))    
+    out=np.column_stack((out,Temperature_out))    
+    out=np.column_stack((out,Density_out))
+    out=np.column_stack((out,diff_Vs))    
+
+    return out
 
 def half_space_ocean(depth,Age,T_mantle,T_surface):
     kappa = 1e-6;
