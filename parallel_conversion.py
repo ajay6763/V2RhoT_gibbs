@@ -1,3 +1,4 @@
+from datetime import date
 import multiprocessing
 import os
 import sys, getopt
@@ -7,12 +8,12 @@ import V2RhoT_gibbs_lib as lib
 
 
 
-
 def worker(name, data, table,outdir: str) -> None:
     print(f'Started worker {name}')
     ## run conversion here
     systime = time.time()
-    out_gibbs=lib.vel_to_temp(data[:,2],data[:,3],table)
+    #out_gibbs=lib.vel_to_temp(data[:,2],data[:,3],table)
+    out_gibbs=lib.vel_to_temp_prop_out(data[:,2],data[:,3],table)
     out_save=np.zeros_like(data[:,1])
     out_save=data[:,0]
     out_save=np.column_stack((out_save,data[:,1]))
@@ -21,7 +22,11 @@ def worker(name, data, table,outdir: str) -> None:
     out_save=np.column_stack((out_save,out_gibbs[:,2]))
     out_save=np.column_stack((out_save,out_gibbs[:,3]))
     out_save=np.column_stack((out_save,out_gibbs[:,4]))
-    np.savetxt(str(outdir)+"/"+str(name)+'_vel_converted.txt',out_save,header="#x(km) y(km) depth(km) Pressure(bar) Temperature(oC) Density(kg/m3) Vs_diff(km/s)",comments='',fmt='%10.3f')
+    out_save=np.column_stack((out_save,out_gibbs[:,5]))
+    out_save=np.column_stack((out_save,out_gibbs[:,6]))
+    #out_save=np.column_stack((out_save,out_gibbs[:,7]))
+    #np.savetxt(str(outdir)+"/"+str(name)+'_vel_converted.txt',out_save,header="#x(km) y(km) depth(km) Pressure(bar) Temperature(oC) Density(kg/m3) Vp (km/s) Vs (km/s) Vs_diff(km/s) Pseudo-metls(%)",comments='',fmt='%10.3f')
+    np.savetxt(str(outdir)+"/"+str(name)+'_vel_converted.txt',out_save,header="#x(km) y(km) depth(km) Pressure(bar) Temperature(oC) Density(kg/m3) Vp (km/s) Vs (km/s) Vs_diff(km/s)",comments='',fmt='%10.3f')
     worker_time=(time.time()-systime)/60.0
     print(f'{name} worker finished in {worker_time} min.')
     
@@ -39,11 +44,11 @@ def main(argv):
              Below are the available options which you can pass as a command line argument:\n\
             -h : help\n\
             -p : no of parts to run in parallel (e.g., no of available cores). Default is 1\n\
-            -i : input file name in the data_tomo folder\n\
+            -i : input file name in the data_tomo folder. Format x(*) y(*) depth(km) Vs(km/s)\n\
             -o : output file name which will be saved in output folder\n\
             -m : name of the material file in databases folder. Default is DMM_HP\n\
             -g : grain size in mm. Default is 10mm\n\
-            -s : oscillation period in seconds. Default is 75 seconds\nAll of the input options will be in the output file as comments.')
+            -s : oscillation period in seconds. Default is 75 seconds\nAll of the input options will be written in the output file as comments.')
 
         sys.exit(2)
     if (len(opts)!=0):
@@ -68,7 +73,7 @@ def main(argv):
         print('Output file is', outputfile)
         print('Material file is', materialfile)
         print('Grain size is', grain_size)
-        print('Occilation period is', oscillation_period)
+        print('Oscillation period is', oscillation_period)
         
         ### get current directory
         path = os.getcwd()
@@ -121,6 +126,8 @@ def main(argv):
             DMM_atten_melt_corrected[i,3],DMM_atten_melt_corrected[i,4],melt[i] = lib.velocity_melt_correction_mantle(DMM_atten_melt_corrected[i,0]-273.15,
                                                                                                     DMM_atten_melt_corrected[i,1]/10000,
                                                                     DMM_atten_melt_corrected[i,3],DMM_atten_melt_corrected[i,4])
+        #DMM_atten_melt_corrected[:,5]=0
+        DMM_atten_melt_corrected[:,5]=melt[:]
         table=DMM_atten_melt_corrected
         print("Time spent on loading data: {:.2f} sec".format((time.time()-systime)))
 
@@ -155,13 +162,13 @@ def main(argv):
         ###############
         # gather all output
         # make comments that includes all the parameters used for conversion and put in the final converted file
-        meta_data = "#Input file is: " + str(inputfile) +"\n#Output file is: " + str(outputfile) +"\n#Material file is: " + str(materialfile) +"\n#Grain size is: " + str(grain_size) +"mm\n"+"\n#Oscillation period is: " + str(oscillation_period) +"seconds\n"
+        meta_data = "#Created on: " + str(date.today()) +"\n#Input file is: " + str(inputfile) +"\n#Output file is: " + str(outputfile) +"\n#Material file is: " + str(materialfile) +"\n#Grain size is: " + str(grain_size) +" mm"+"\n#Oscillation period is: " + str(oscillation_period) +" seconds\n"
 
         out_save = np.loadtxt(str(outdir)+'/Process_1_vel_converted.txt',comments='#')
         for i in range(1,no_of_processes):
             out = np.loadtxt(str(outdir)+'/Process_'+str(i+1)+'_vel_converted.txt',comments='#') 
             out_save=np.append(out_save,out,axis=0)
-        np.savetxt(str(outdir)+'/'+str(outputfile),out_save,header="#x(km) y(km) depth(km) Pressure(bar) Temperature(oC) Density(kg/m3) Vs_diff(km/s)",comments=meta_data,fmt='%10.3f')
+        np.savetxt(str(outdir)+'/'+str(outputfile),out_save,header="#x(km) y(km) depth(km) Pressure(bar) Temperature(oC) Density(kg/m3) Vp(km/s) Vs(km/s) Vs_diff(km/s)",comments=meta_data,fmt='%10.3f')
 
     
     else:

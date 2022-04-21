@@ -213,15 +213,15 @@ def velocity_melt_correction_mantle(T,P,Vp,Vs):
     Vs_corrected = Vs - dVs
     '''
     if melt_frac > 0:
-        dVs = -5.3 * melt_frac*100
-        dVp = -2.3 * melt_frac*100
+        dVs = -5.3 * melt_frac #*100
+        dVp = -2.3 * melt_frac #*100
         Vp_corrected = Vp + (dVp*Vp)/100
         Vs_corrected = Vs + (dVs*Vs)/100
     else:
         Vp_corrected = Vp
         Vs_corrected = Vs
-        melt_frac    = 0.
-    return Vp_corrected,Vs_corrected, melt_frac*100
+        melt_frac    = 0
+    return Vp_corrected,Vs_corrected, melt_frac
 
 def velocity_melt_correction_crust(T,P,Vp,Vs):
     ## get the melt fraction at the P and T
@@ -236,15 +236,15 @@ def velocity_melt_correction_crust(T,P,Vp,Vs):
     Vs_corrected = Vs - dVs
     '''
     if melt_frac > 0:
-        dVs = -5.3 * melt_frac*100
-        dVp = -2.3 * melt_frac*100
+        dVs = -5.3 * melt_frac #*100
+        dVp = -2.3 * melt_frac #*100
         Vp_corrected = Vp + (dVp*Vp)/100
         Vs_corrected = Vs + (dVs*Vs)/100
     else:
         Vp_corrected = Vp
         Vs_corrected = Vs
         melt_frac    = 0.
-    return Vp_corrected,Vs_corrected, melt_frac*100
+    return Vp_corrected,Vs_corrected, melt_frac
 
 def lookup_vs_P_accurate_prop(vs,P,table):
     '''
@@ -284,7 +284,8 @@ def lookup_vs_P_accurate_prop(vs,P,table):
         Dens=(table[index,2]+table[index-1,2])/2
         Vp=(table[index,3]+table[index-1,3])/2
         Vs=(table[index,4]+table[index-1,4])/2
-        melt=(table[index,5]+table[index-1,5])/2
+        melt=table[index,5]
+        #melt=(table[index,5]+table[index-1,5])/2
         
     else:
         T=-273.0+(table[index,0]+table[index+1,0])/2
@@ -292,7 +293,8 @@ def lookup_vs_P_accurate_prop(vs,P,table):
         Dens=(table[index,2]+table[index+1,2])/2
         Vp=(table[index,3]+table[index+1,3])/2
         Vs=(table[index,4]+table[index+1,4])/2
-        melt=(table[index,5]+table[index+1,5])/2
+        melt=table[index,5]
+        #melt=(table[index,5]+table[index+1,5])/2
         
         #print index, T_LitMod,P_LitMod
     return P_out,T,Dens,Vp,Vs,melt
@@ -345,6 +347,41 @@ def vel_to_temp(depth,Vs,Table):
     out=np.column_stack((out,Temperature_out))    
     out=np.column_stack((out,Density_out))
     out=np.column_stack((out,diff_Vs))    
+
+    return out
+
+def vel_to_temp_prop_out(depth,Vs,Table):
+    Temperature_out = []#np.zeros_like(tomo[:,1])
+    Density_out     = []#np.zeros_like(tomo[:,1])
+    melt_out     = [] #np.zeros_like(tomo[:,1])
+    Vp_out     = [] #np.zeros_like(tomo[:,1])
+    Vs_out     = [] #np.zeros_like(tomo[:,1])
+    diff_Vs         = []
+    P_out           = []
+    #Vp_out          = []#np.zeros_like(tomo[:,1])
+    #Vs_out          = []#np.zeros_like(tomo[:,1])
+    for i in range(len(depth)):
+        P  = pressure_inter(depth[i])
+        Vs_in = Vs[i]
+        P_table,temp,dens,vp,vs,melt=lookup_vs_P_accurate_prop(Vs_in,P.tolist(),Table)
+        #Vp_out.append(vp)
+        #Vs_out.append(vs)
+        P_out.append(P_table)
+        Temperature_out.append(temp)
+        Density_out.append(dens)
+        Vs_out.append(vs)
+        Vp_out.append(vp)
+        diff_Vs.append(Vs_in-vs)
+        #melt_out.append(melt)
+    ### pasting the outputs to the input tomo table
+    out=depth;
+    out=np.column_stack((out,P_out))    
+    out=np.column_stack((out,Temperature_out))    
+    out=np.column_stack((out,Density_out))
+    out=np.column_stack((out,Vp_out))
+    out=np.column_stack((out,Vs_out))
+    out=np.column_stack((out,diff_Vs))    
+    #out=np.column_stack((out,melt_out))
 
     return out
 
