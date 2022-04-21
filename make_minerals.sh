@@ -121,12 +121,4 @@ echo " "
 echo " "
 
 echo "Your beautiful mantle minerals are in Phase_diagram folder and are ready to be plotted :)" 
-echo "Use the provided python scripts in Phase_diagrams folder."
-echo " "
-echo " "
-echo "   phase_diagram_1D.py -- plots at a node along the profile "
-
-echo " "
-echo " "
-
-echo "   phase_diagram_2D.py -- plots along the profile "
+echo "Use the provided jupyter-notebook phase_diagram.ipynb."
