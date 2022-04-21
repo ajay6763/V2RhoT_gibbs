@@ -12,7 +12,27 @@ import math
 ak135 = np.loadtxt('./databases/ak135f.txt',skiprows=1+2)
 ak135_P = 9.8*ak135[:,0]*1e3*ak135[:,1]*1e3*1e-5
 pressure_inter = interpolate.interp1d(ak135[:,0],ak135_P)
+def lithostatic_pressure(depth,density):
+    Pressure_lith = np.zeros_like(depth)
+    # Check is the first index is at zero depth or not
+    # If it is not then pressures is set equal rho*g*h
+    # else is it set to 0
+    if depth[0] != 0:
+        Pressure_lith[0] = density[0] * depth[0]* 9.8 * 1e3 * 1e-5
+    else:
+        #thickness = (depth[1]-depth[0]) #*1e3
+        Pressure_lith[0] = 0
+    # Now looping through depths
+    for j in range(len(depth)-2):
+        thickness = (depth[j+2] - depth [j+1]) *1e3
+        Pressure_lith[j+1]=Pressure_lith[j] + thickness*density[j+1] *9.8*1e-5
+        
+    # fixing last index
+    Pressure_lith[-1] = Pressure_lith[-2] + (depth[-1] - depth [-2])*1e3 * density[-2]*9.8*1e-5 
+    #print(depth[:],density[:],Pressure_lith[:])
 
+    p_func = interpolate.interp1d(depth,Pressure_lith)
+    return p_func
 def lookup_P_T(V,P,table):
 	index=[]
     #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
@@ -244,7 +264,7 @@ def lookup_vs_P_accurate_prop(vs,P,table):
     P_out=[]
     melt=[]
     #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
-    dist=np.array(((vs-table[:,4])**2+(P-table[:,1])**2));
+    dist=np.array(((vs-table[:,4])**2+(P-table[:,1])**2)**0.5);
     index=dist.argmin();
     
     diff_vs=table[index,4] - vs
