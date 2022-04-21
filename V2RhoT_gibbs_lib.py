@@ -285,7 +285,7 @@ def lookup_vs_P_accurate_prop(vs,P,table):
         Vp=(table[index,3]+table[index-1,3])/2
         Vs=(table[index,4]+table[index-1,4])/2
         melt=table[index,5]
-        #melt=(table[index,5]+table[index-1,5])/2
+        melt=(table[index,5]+table[index-1,5])/2
         
     else:
         T=-273.0+(table[index,0]+table[index+1,0])/2
@@ -294,7 +294,7 @@ def lookup_vs_P_accurate_prop(vs,P,table):
         Vp=(table[index,3]+table[index+1,3])/2
         Vs=(table[index,4]+table[index+1,4])/2
         melt=table[index,5]
-        #melt=(table[index,5]+table[index+1,5])/2
+        melt=(table[index,5]+table[index+1,5])/2
         
         #print index, T_LitMod,P_LitMod
     return P_out,T,Dens,Vp,Vs,melt
@@ -340,7 +340,7 @@ def vel_to_temp(depth,Vs,Table):
         P_out.append(P_table)
         Temperature_out.append(temp)
         Density_out.append(dens)
-        diff_Vs.append(Vs_in-vs)
+        diff_Vs.append(((Vs_in-vs)/Vs_in)*100)
     ### pasting the outputs to the input tomo table
     out=depth;
     out=np.column_stack((out,P_out))    
@@ -363,7 +363,7 @@ def vel_to_temp_prop_out(depth,Vs,Table):
     for i in range(len(depth)):
         P  = pressure_inter(depth[i])
         Vs_in = Vs[i]
-        P_table,temp,dens,vp,vs,melt=lookup_vs_P_accurate_prop(Vs_in,P.tolist(),Table)
+        P_table,temp,dens,vp,vs,m=lookup_vs_P_accurate_prop(Vs_in,P.tolist(),Table)
         #Vp_out.append(vp)
         #Vs_out.append(vs)
         P_out.append(P_table)
@@ -371,8 +371,8 @@ def vel_to_temp_prop_out(depth,Vs,Table):
         Density_out.append(dens)
         Vs_out.append(vs)
         Vp_out.append(vp)
-        diff_Vs.append(Vs_in-vs)
-        #melt_out.append(melt)
+        diff_Vs.append(((Vs_in-vs)/Vs_in)*100)
+        melt_out.append(m)
     ### pasting the outputs to the input tomo table
     out=depth;
     out=np.column_stack((out,P_out))    
@@ -381,7 +381,7 @@ def vel_to_temp_prop_out(depth,Vs,Table):
     out=np.column_stack((out,Vp_out))
     out=np.column_stack((out,Vs_out))
     out=np.column_stack((out,diff_Vs))    
-    #out=np.column_stack((out,melt_out))
+    out=np.column_stack((out,melt_out))
 
     return out
 
