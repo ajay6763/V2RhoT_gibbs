@@ -1,5 +1,5 @@
 # V2RhoT_gibbs
-Python scripts to convert seismic velocities to temperature and density based on Gibbs free energy minimization from Perple_X
+Python scripts to convert seismic velocities to temperature and density based on Gibbs free energy minimization from Perple_X.
 
 Look-up tables are generated using a module of LitMod2D_2.0 (https://github.com/ajay6763/LitMod2D_2.0_package_dist_users) called Generator. If you want to generate look-up tables
 for new composition please follow the instruction in LitMod2D_2.0. You do not need to have the whole installation of the LitMod2D_2.0 just the Generator part (written below).
@@ -26,3 +26,5 @@ After type enter command a command prompt will appear and you will be asked cert
 
 If you do not want to waste time in installling then I highly recommend using Docker way described in the manual (https://github.com/ajay6763/LitMod2D_2.0_package_dist_users/blob/master/manual/LitMod_GUI_manual.pdf). 
 )
+
+If use V2RhoT_gibbs please cite LitMod2D, Afonso et al., 2008 (https://doi.org/10.1029/2007GC001834), Kumar et al., 2020( https://doi.org/10.1029/2019GC008777) and Perple_X Connolly, 2009 (https://doi.org/10.1029/2009GC002540).
