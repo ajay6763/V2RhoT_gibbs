@@ -470,7 +470,7 @@ def crust_melt_atten_correction(Table,grain_size,oscillation):
                                                                  Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4])
     # append melt to the table
     Table_atten_melt_corrected[:,5]=melt[:]
-    return Table
+    return Table_atten_melt_corrected
 '''
 def vel_to_temp(depth,Vs,Table):
     Temperature_out = []#np.zeros_like(tomo[:,1])
