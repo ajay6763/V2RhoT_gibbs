@@ -1,25 +1,3 @@
-![](figures/legal_header.png)
-
-# Velocity Conversion Guidelines
-
-## Contents
-[TOC]
-___
-## Introduction
-This guidelines serve as a collection of useful hints and information on the topic of conversion of seismic velocities to temperature, pressure, etc.
-
-___
-## Theoretical background
-*to be added*
-
-___
-## Software
-
-There are several tools for conversion of seismic velocities:
-- [V2RhoT_gibbs](https://doi.org/10.5281/zenodo.6538257) for conversion of seismic velocities to temperature and density, see also [V2RhoT_gibbs section](#v2rhot_gibbs)
-- [VelocityConversion](https://git.gfz-potsdam.de/basin-modelling/velocityconversion)
-- [VeloDT](https://git.gfz-potsdam.de/basin-modelling/velodt)
-
 ### V2RhoT_gibbs
 
 [V2RhoT_gibbs](https://doi.org/10.5281/zenodo.6538257) is a Python tool that allows converting seismic velocities to temperature and density in the mantle using a Gibbs free energy minimization algorithm.
