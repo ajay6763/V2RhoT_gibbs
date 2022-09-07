@@ -12,6 +12,8 @@ import math
 ak135 = np.loadtxt('./databases/ak135f.txt',skiprows=1)
 ak135_P = 9.8*ak135[:,0]*1e3*ak135[:,1]*1e3*1e-5
 pressure_inter = interpolate.interp1d(ak135[:,0],ak135_P)
+depth_inter = interpolate.interp1d(ak135_P,ak135[:,0])
+
 def lithostatic_pressure(depth,density):
     Pressure_lith = np.zeros_like(depth)
     # Check is the first index is at zero depth or not
@@ -136,6 +138,98 @@ def atten_correction(T,P,Vp,Vs,oscill,grain_size):
     Vp_correc = Vp*(1.0E0-cotp50)
     return Vp_correc,Vs_correc
 
+def atten_correction_Behn2009(T,P,Vp,Vs,oscill,d,COH):
+    """
+    Behn et al., 2009 https://doi.org/10.1016/j.epsl.2009.03.014
+    Input:
+    T - Kelvin
+    P - Pascal
+    Vp,Vs - km/s 
+    oscill - time period (seconds)
+    d - meter
+    COH
+    Output:
+    """
+    frequency   =   1/oscill # CHECK THIS FOR OMEGA
+    R           =   8.314    # gas constant
+    pi          =   3.1415926 #------------ shephard;s pie :)
+    pq_ref      =   1.09    #reference grain exponent 
+    pq          =   1.0     # grain exponent 
+    TQ_ref      =   1265    # refrence temperature in oC
+    d_ref       =   1.24e-5 # reference grain size in meters 
+
+    EQ_ref      =   505e3   # referene activation energy in J/mol
+    EQ          =   420e3   #activation energy
+    VQ_ref      =   1.2e-5  #reference activation volime m**3/mol 
+    VQ          =   1.2e-5  #activation volume
+    
+    Bo          =   1.28e8  # prefactor for Q for omega=0.122 s^-1
+    COH_ref     =   50      # H/10^6 Si
+    PQ_ref      =   300e6 # reference pressure in Pa;
+    rQ          =   1.2;
+    alpha       =   0.27;
+
+    B = Bo*d_ref**(pq-pq_ref)*(COH/COH_ref)**rQ*math.exp(((EQ+PQ_ref*VQ)-(EQ_ref+PQ_ref*VQ_ref))/(R*TQ_ref))
+    
+    Qs_inv=(B*d**(-1*pq)*frequency**(-1)*math.exp(-(EQ+P*VQ)/(R*T)))**alpha # Inverse of Anelastic factor
+    Qp        = (1/Qs_inv)*(9/4)
+    Qs        = 1/Qs_inv
+    vs_correction    = ((1.0/math.tan((pi*alpha)/2.0))*Qs_inv)*0.5
+    vp_correction    = ((1.0/math.tan((pi*alpha)/2.0))*Qs_inv)*(2.0/9.0)
+    #################################################
+    ## correcting velocities
+    Vs_correc = Vs*(1.0-vs_correction)
+    Vp_correc = Vp*(1.0-vp_correction)
+    return Vp_correc,Vs_correc
+
+
+def atten_correction_Behn2009_crust(T,P,Vp,Vs,oscill,d,COH):
+    """
+    Behn et al., 2009 https://doi.org/10.1016/j.epsl.2009.03.014
+    Input:
+    T - Kelvin
+    P - Pascal
+    Vp,Vs - km/s 
+    oscill - time period (seconds)
+    d - meter
+    COH
+    Output:
+    """
+    frequency   =   1/oscill # CHECK THIS FOR OMEGA
+    R           =   8.314    # gas constant
+    pi          =   3.1415926 #------------ shephard;s pie :)
+    pq_ref      =   1.09    #reference grain exponent 
+    pq          =   1.0     # grain exponent 
+    TQ_ref      =   1265    # refrence temperature in oC
+    d_ref       =   1.24e-5 # reference grain size in meters 
+
+    EQ_ref      =   505e3   # referene activation energy in J/mol
+    EQ          =   420e3   #activation energy
+    VQ_ref      =   1.2e-5  #reference activation volime m**3/mol 
+    VQ          =   1.2e-5  #activation volume
+    
+    Bo          =   1.28e8  # prefactor for Q for omega=0.122 s^-1
+    COH_ref     =   50      # H/10^6 Si
+    PQ_ref      =   300e6 # reference pressure in Pa;
+    rQ          =   1.2;
+    alpha       =   0.27;
+
+    B = Bo*d_ref**(pq-pq_ref)*(COH/COH_ref)**rQ*math.exp(((EQ+PQ_ref*VQ)-(EQ_ref+PQ_ref*VQ_ref))/(R*TQ_ref))
+    
+    Qs_inv=(B*d**(-1*pq)*frequency**(-1)*math.exp(-(EQ+P*VQ)/(R*T)))**alpha # Inverse of Anelastic factor
+    Qp        = (1/Qs_inv)*(9/4)
+    Qs        = 1/Qs_inv
+    if T > 800 +273.15 and P > 1*1e9:
+        vs_correction    = ((1.0/math.tan((pi*alpha)/2.0))*Qs_inv)*0.5
+        vp_correction    = ((1.0/math.tan((pi*alpha)/2.0))*Qs_inv)*(2.0/9.0)
+    else:
+        vs_correction    = ((1.0/math.tan((pi*alpha)/2.0))*(1/50))*0.5
+        vp_correction    = ((1.0/math.tan((pi*alpha)/2.0))*(1/100))*(2.0/9.0)
+    #################################################
+    ## correcting velocities
+    Vs_correc = Vs*(1.0-vs_correction)
+    Vp_correc = Vp*(1.0-vp_correction)
+    return Vp_correc,Vs_correc
 
 def atten_correction_J_2002(T,P,Vp,Vs,oscill,grain_size):
     """
@@ -306,38 +400,7 @@ def velocity_melt_correction_mantle_Chantel_2016(T,P,Vp,Vs):
         melt_frac    = 0
     return Vp_corrected,Vs_corrected, melt_frac
 
-def atten_correction_Chantel_2016(T,P,Vp,Vs,oscill,grain_size):
-    """
-    From Cahntle et al 2016 Sci. Adv.
-    Reduction in Vp and Vs as a functoion of melts
-    The curves in this paper have absolute value of Vp and Vs
-    as intercept and correction are added to it.
-    What I will do here is that replace this absolute value
-    with the anharmonic velocity. This means that I am simply moving
-    correction up or down (scaling and up-scaling?) for all
-    pressure ranges i.e. depth levels.
-    """
-    ## Parameters from Jackson et al. 2002
-    A      = 750       #------------ Pre-exponential factor
-    alfa   = 0.26      #------------ frequency dependence
-    energi = 424.0E03  #------------ Activation energy
-    volexp = 1.60E-05  #------------ Activation volume
-    R      = 8.314472  #------------ Gas constant
-    pi     = 3.1415926 #------------ shephard;s pie :)
 
-    #################################################
-    ## calculating Qp and Qs
-    parexp    = math.exp((-(energi+(volexp*P)))/(R*(T)))
-    sqatt50   = A*(((oscill*(1.0E0/(grain_size*1000.0E0)))*parexp))**alfa
-    Qp        = (1/sqatt50)*(9/4)
-    Qs        = 1/sqatt50
-    cots50    = ((1.0E0/math.tan((pi*alfa)/2.0E0))*sqatt50)*0.5E0
-    cotp50    = ((1.0E0/math.tan((pi*alfa)/2.0E0))*sqatt50)*(2.0E0/9.0E0)
-    #################################################
-    ## correcting velocities
-    Vs_correc = Vs*(1.0E0-cots50)
-    Vp_correc = Vp*(1.0E0-cotp50)
-    return Vp_correc,Vs_correc
 
 def velocity_melt_correction_crust(T,P,Vp,Vs):
     ## get the melt fraction at the P and T
@@ -443,6 +506,116 @@ def mantle_melt_atten_correction(Table,grain_size,oscillation):
                                                                                                  Table_atten_melt_corrected[i,1]/1e4,
                                                                  Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4])
     # append melt to the table
+    #Table_atten_melt_corrected[:,5]=0.0
+    Table_atten_melt_corrected[:,5]=melt[:]
+    return Table_atten_melt_corrected
+
+
+def mantle_melt_atten_correction_Behn2009(Table,grain_size,oscillation,COH):
+    """
+    Table : perplex table
+    grain_size : grain size in mm.
+    oscilation: oscillation period in seconds.
+    """
+    # correction using grain size = 10 mm and oscillatio period of 75 seconds.
+    # Attenuation model of Jackson and Faul 2010
+    # Function: lib.atten_correction (T (oC),P (Pascal),Vp (km/s),Vs (km/s),oscilation period (s), grain size (mm))
+    Table_atten_corrected = np.copy(Table)
+    """
+    atten_correction_Behn2009(T,P,Vp,Vs,oscill,grain_size,COH):
+    Behn et al., 2009 https://doi.org/10.1016/j.epsl.2009.03.014
+    Input:
+    T - Kelvin
+    P - Pascal
+    Vp,Vs - km/s 
+    oscill - time period (seconds) 
+    d - meter
+    Output:
+   """ 
+    for i in range(len(Table_atten_corrected)):
+        Table_atten_corrected[i,3],Table_atten_corrected[i,4] = atten_correction_Behn2009(Table_atten_corrected[i,0],Table_atten_corrected[i,1]*1e5,
+                                                             Table_atten_corrected[i,3],Table_atten_corrected[i,4],oscillation,grain_size/1e3,COH)
+
+    # correction for melts
+    # These are relations from lab experiments. More details in Afonso et al., 2016 III
+    # Function: lib.velocity_melt_correction_mantle (T (oC),P (GPa),VP (km/s),Vs (km/s)
+    Table_atten_melt_corrected = np.copy(Table_atten_corrected)
+    melt = np.zeros_like(Table_atten_melt_corrected[:,0])
+    for i in range(len(Table_atten_melt_corrected)):
+        Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4],melt[i] = velocity_melt_correction_mantle_Hammond_Humphreys(Table_atten_melt_corrected[i,0]-273.15,
+                                                                                                 Table_atten_melt_corrected[i,1]/1e4,
+                                                                 Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4])
+    # append melt to the table
+    #Table_atten_melt_corrected[:,5]=0.0
+    Table_atten_melt_corrected[:,5]=melt[:]
+    return Table_atten_melt_corrected
+
+def mantle_melt_atten_correction_Behn2009_crust(Table,grain_size,oscillation,COH):
+    """
+    Table : perplex table
+    grain_size : grain size in mm.
+    oscilation: oscillation period in seconds.
+    """
+    # correction using grain size = 10 mm and oscillatio period of 75 seconds.
+    # Attenuation model of Jackson and Faul 2010
+    # Function: lib.atten_correction (T (oC),P (Pascal),Vp (km/s),Vs (km/s),oscilation period (s), grain size (mm))
+    Table_atten_corrected = np.copy(Table)
+    """
+    atten_correction_Behn2009(T,P,Vp,Vs,oscill,grain_size,COH):
+    Behn et al., 2009 https://doi.org/10.1016/j.epsl.2009.03.014
+    Input:
+    T - Kelvin
+    P - Pascal
+    Vp,Vs - km/s 
+    oscill - time period (seconds) 
+    d - meter
+    Output:
+   """ 
+    for i in range(len(Table_atten_corrected)):
+        Table_atten_corrected[i,3],Table_atten_corrected[i,4] = atten_correction_Behn2009_crust(Table_atten_corrected[i,0],Table_atten_corrected[i,1]*1e5,
+                                                             Table_atten_corrected[i,3],Table_atten_corrected[i,4],oscillation,grain_size/1e3,COH)
+
+    # correction for melts
+    # These are relations from lab experiments. More details in Afonso et al., 2016 III
+    # Function: lib.velocity_melt_correction_mantle (T (oC),P (GPa),VP (km/s),Vs (km/s)
+    Table_atten_melt_corrected = np.copy(Table_atten_corrected)
+    melt = np.zeros_like(Table_atten_melt_corrected[:,0])
+    for i in range(len(Table_atten_melt_corrected)):
+        Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4],melt[i] = velocity_melt_correction_mantle_Hammond_Humphreys(Table_atten_melt_corrected[i,0]-273.15,
+                                                                                                 Table_atten_melt_corrected[i,1]/1e4,
+                                                                 Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4])
+    # append melt to the table
+    #Table_atten_melt_corrected[:,5]=0.0
+    Table_atten_melt_corrected[:,5]=melt[:]
+    return Table_atten_melt_corrected
+def mantle_melt_atten_correction_J_2002(Table,grain_size,oscillation):
+    """
+    Table : perplex table
+    grain_size : grain size in mm.
+    oscilation: oscillation period in seconds.
+    """
+    # correction using grain size = 10 mm and oscillatio period of 75 seconds.
+    # Attenuation model of Jackson and Faul 2010
+    # Function: lib.atten_correction (T (oC),P (Pascal),Vp (km/s),Vs (km/s),oscilation period (s), grain size (mm))
+    Table_atten_corrected = np.copy(Table)
+    #for i in range(len(Table_atten_corrected)):
+    #    Table_atten_corrected[i,3],Table_atten_corrected[i,4] = atten_correction_J_2002(Table_atten_corrected[i,0],Table_atten_corrected[i,1]*1e5,
+    #                                                         Table_atten_corrected[i,3],Table_atten_corrected[i,4],oscillation,grain_size)
+    for i in range(len(Table_atten_corrected)):
+        Table_atten_corrected[i,3],Table_atten_corrected[i,4] = atten_correction_J_2002(Table_atten_corrected[i,0],Table_atten_corrected[i,1]*1e5,
+                                                             Table_atten_corrected[i,3],Table_atten_corrected[i,4],oscillation,grain_size)
+
+    # correction for melts
+    # These are relations from lab experiments. More details in Afonso et al., 2016 III
+    # Function: lib.velocity_melt_correction_mantle (T (oC),P (GPa),VP (km/s),Vs (km/s)
+    Table_atten_melt_corrected = np.copy(Table_atten_corrected)
+    melt = np.zeros_like(Table_atten_melt_corrected[:,0])
+    for i in range(len(Table_atten_melt_corrected)):
+        Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4],melt[i] = velocity_melt_correction_mantle_Hammond_Humphreys(Table_atten_melt_corrected[i,0]-273.15,
+                                                                                                 Table_atten_melt_corrected[i,1]/1e4,
+                                                                 Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4])
+    # append melt to the table
+    #Table_atten_melt_corrected[:,5]=0.0
     Table_atten_melt_corrected[:,5]=melt[:]
     return Table_atten_melt_corrected
 def crust_melt_atten_correction(Table,grain_size,oscillation):
