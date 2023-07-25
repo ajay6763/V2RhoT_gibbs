@@ -316,6 +316,8 @@ Once you copy this to `/home/work` is should be visible at `C:/Users/kumar/work/
 
 ![image-6.png](./figures/V2RhoT_gibbs/image-6.png)
 
+### Citing
+If you use this tool please cite: Kumar, A., Cacace, M., Scheck-Wenderoth, M., Götze, H.-J., & Kaus, B. J. P. (2022). Present-day upper-mantle architecture of the Alps: Insights from data-driven dynamic modeling. Geophysical Research Letters, 49, e2022GL099476. https://doi.org/10.1029/2022GL099476
 ___
 ## References
 <a name='Afonso_etal_2008'></a>
