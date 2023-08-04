@@ -11,7 +11,10 @@ The only requirement is that the look-up tables should have the following column
 ```
 T(k) P(bar) Density(kg/m3) Vp(km/s) Vs(km/s)
 ```
-
+### Citing
+If you use this tool please cite: 
+1. Kumar, A., Cacace, M., Scheck-Wenderoth, M., Götze, H.-J., & Kaus, B. J. P. (2022). Present-day upper-mantle architecture of the Alps: Insights from data-driven dynamic modeling. Geophysical Research Letters, 49, e2022GL099476. https://doi.org/10.1029/2022GL099476
+2. Kumar, A., Fernàndez, M.,Jiménez‐Munt, I., Torne, M., Vergés, J.,& Afonso, J. C. (2020). LitMod2D_2.0:An improved integratedgeophysical‐petrological modeling toolfor the physical interpretation of uppermantle anomalies.Geochemistry,Geophysics, Geosystems,21,e2019GC008777. https://doi.org/10.1029/2019GC008777
 #### Installation
 
 **V2RhoT_gibbs** can be downloaded from [Zenodo](https://doi.org/10.5281/zenodo.6538257) or from the [GitHub](https://github.com/ajay6763/V2RhoT_gibbs).
@@ -316,8 +319,6 @@ Once you copy this to `/home/work` is should be visible at `C:/Users/kumar/work/
 
 ![image-6.png](./figures/V2RhoT_gibbs/image-6.png)
 
-### Citing
-If you use this tool please cite: Kumar, A., Cacace, M., Scheck-Wenderoth, M., Götze, H.-J., & Kaus, B. J. P. (2022). Present-day upper-mantle architecture of the Alps: Insights from data-driven dynamic modeling. Geophysical Research Letters, 49, e2022GL099476. https://doi.org/10.1029/2022GL099476
 ___
 ## References
 <a name='Afonso_etal_2008'></a>
