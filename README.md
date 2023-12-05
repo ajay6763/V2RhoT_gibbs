@@ -82,7 +82,7 @@ Output folder is ./output
 Attenuation model is 1
 Grain size is 10.0 mm
 Oscillation period is 75.0 seconds
-COH is (used when Attenuation model is 1) 50.0 H/10**6Si
+COH is (used when Attenuation model is 2) 50.0 H/10**6Si
 
 ###########################################
 
@@ -150,7 +150,7 @@ Output folder is ./output
 Attenuation model is 2
 Grain size is 5.0 mm
 Oscillation period is 50.0 seconds
-COH is (used when Attenuation model is 1) 1000.0 H/10**6Si
+COH is (used when Attenuation model is 2) 1000.0 H/10**6Si
 
 ###########################################
 
