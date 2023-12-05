@@ -39,7 +39,7 @@ def main(argv):
     COH_val 	        = float(50.0)
     #oscillation_period  = 75
     try :
-        opts,args = getopt.getopt(argv,"h:p:I:i:O:o:m:A:g:s:COH",["idir","ifile","odir","ofile","mfile","Amodel","gsize","operiod","water"])
+        opts,args = getopt.getopt(argv,"h:p:I:i:O:o:m:A:g:s:W:",["idir","ifile","odir","ofile","mfile","Amodel","gsize","operiod","water"])
         #print(opts)
         #print(args)
     except getopt.GetoptError:
@@ -56,7 +56,7 @@ def main(argv):
             -A : attenuation model flag: 1 for Jackson and Faul 2010, 2 for Behn et al., 2009. If you choose 2 then you will have to supply COH. See COH option.\n\
             -g : grain size in mm. Default is 10mm\n\
             -s : oscillation period in seconds. Default is 75 seconds\n\
-            -COH : Water contnent in  H/10**6Si. Defualt is 50 H/10**6Si which almost dry. Note this will be used if you choose attenuation model 2.\n\
+            -W : Water contnent in  H/10**6Si. Defualt is 50 H/10**6Si which almost dry. Note this will be used if you choose attenuation model 2.\n\
             -geo : Geology file in the data_geo folder. Format Format x(*) y(*) geo(codes). Note: This option is not active at the momemnt.\
             \nAll of the input options will be written in the output file as comments.')
         print('###########################################################################################\n')
@@ -78,7 +78,7 @@ def main(argv):
                 -A : attenuation model flag: 1 for Jackson and Faul 2010 (default model), 2 for Behn et al., 2009. If you choose 2 then you will have to supply COH. See COH option.\n\
                 -g : grain size in mm. Default is 10mm\n\
                 -s : oscillation period in seconds. Default is 75 seconds\n\
-                -COH : Water contnent in  H/10**6Si. Defualt is 50 H/10**6Si which almost dry. Note this will be used if you choose attenuation model 2.\n\
+                -W : Water contnent in  H/10**6Si. Defualt is 50 H/10**6Si which almost dry. Note this will be used if you choose attenuation model 2.\n\
                 -geo : Geology file in the data_geo folder. Format Format x(*) y(*) geo(codes). Note: This option is not active at the momemnt.\
                 \nAll of the input options will be written in the output file as comments.')
                 print('###########################################################################################\n')               
@@ -101,7 +101,7 @@ def main(argv):
                 grain_size = float(arg)
             elif opt in ("-s", "--operiod"):
                 oscillation_period = float(arg)
-            elif opt in ("-COH", "--water"):
+            elif opt in ("-W", "--water"):
                 COH_val = float(arg)
             else:
                 pass
@@ -116,7 +116,7 @@ def main(argv):
         print('Attenuation model is', atten_model)
         print('Grain size is', grain_size,'mm')
         print('Oscillation period is', oscillation_period,'seconds')
-        print('COH is (used when Attenuation model is 1)', COH_val,'H/10**6Si')
+        print('COH is (used when Attenuation model is 2)', COH_val,'H/10**6Si')
         print('\n###########################################')
         
         ### get current directory
