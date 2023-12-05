@@ -40,14 +40,17 @@ PS C:\Users\kumar\work\V2RhoT_Gibbs_projects\V2RhoT_gibbs_dev> python parallel_c
              Below are the available options which you can pass as a command line argument:
             -h : help
             -p : no of parts to run in parallel (e.g., no of available cores). Default is 1
+            -I : input directory. Default is ./data_tomo
             -i : input file name in the data_tomo folder. Format x(*) y(*) depth(km) Vs(km/s)
+            -O : output directory. Default is ./output
             -o : output file name which will be saved in output folder
             -m : name of the material file in databases folder. Default is DMM_HP
+            -A : attenuation model flag: 1 for Jackson and Faul 2010, 2 for Behn et al., 2009. If you choose 2 then you will have to supply COH. See COH option.
             -g : grain size in mm. Default is 10mm
             -s : oscillation period in seconds. Default is 75 seconds
+            -W : Water contnent in  H/10**6Si. Defualt is 50 H/10**6Si which almost dry. Note this will be used if you choose attenuation model 2.
             -geo : Geology file in the data_geo folder. Format Format x(*) y(*) geo(codes). Note: This option is not active at the momemnt.
 All of the input options will be written in the output file as comments.
-###########################################################################################
 ```
 
 #### Example
@@ -66,14 +69,20 @@ PS C:\Users\kumar\work\V2RhoT_Gibbs_projects\V2RhoT_gibbs_opt\V2RhoT_gibbs> pyth
 ```
 This should give you following output:
 ```
+PS C:\Users\kumar\work\V2RhoT_Gibbs_projects\V2RhoT_gibbs_opt\V2RhoT_gibbs> python .\parallel_conversion.py -p 1 -i Test_parallel.dat -o Test_parallel.csv
+
 ###########################################
 Your options are:
 Total no of processes 1
 Input file is Test_parallel.dat
 Output file is Test_parallel.csv
 Material file is DMM_HP
+Input folder is ./data_tomo
+Output folder is ./output
+Attenuation model is 1
 Grain size is 10.0 mm
 Oscillation period is 75.0 seconds
+COH is (used when Attenuation model is 2) 50.0 H/10**6Si
 
 ###########################################
 
@@ -81,9 +90,10 @@ Oscillation period is 75.0 seconds
 Output directory exists. It will be overwritten.
 
 ###########################################
+Chose 1 Atten model.
 
 ###########################################
-Time spent on loading data: 1.76 sec
+Time spent on loading data: 2.35 sec
 
 ###########################################
 
@@ -93,26 +103,27 @@ Length of chunk to run on each processor: 3120
 
 ###########################################
 Started worker Process_1
-Process_1 worker finished in 0.11365952491760253 min.
+Process_1 worker finished in 0.27479236125946044 min.
 
 ###########################################
-Total execution time: 0.1 min
+Total execution time: 0.3 min
 Hope that was fast enough for you. If not then maybe try increasing no of processes with -p option
 Enjoy your conversion results in the output folder :)
-
 ###########################################
 ```
 After a successful run, you should have a file named `Test_parallel.csv` in the output folder that has the following header:
 ```
-#Created on: 2022-06-22									
-#Input file is: Test_parallel.dat									
-#Output file is: Test_parallel.csv									
-#Material file is: DMM_HP									
-#Grain size is: 10.0 mm									
-#Oscillation period is: 75.0 seconds									
-#x(km) y(km) depth(km) Pressure(bar) Temperature(oC) Density(kg/m3) Vp(km/s) Vs(km/s) Vs_diff(%) Pseudo-melts(%)									
+#Created on: 2023-12-05
+#Input file is: Test_parallel.dat
+#Output file is: Test_parallel.csv
+#Material file is: DMM_HP
+#Attenuation model is: 1
+#Grain size is: 10.0 mm
+#Oscillation period is: 75.0 seconds
+#COH is: 50.0H/10**6Si
+#x(km), y(km), depth(km), Pressure(bar), Temperature(oC), Density(kg/m3), Vp(km/s), Vs(km/s), Vs_diff(%), Pseudo-melts(%)						
 ```
-In this example, since we did not specify grain size, oscillation period or a material file it took the default values that are printed at the top.
+In this example, since we did not specify grain size, oscillation period or a material file it took the default values that are printed at the top. Two type of attenuation models are implemented which are input with a option -A where 1 refers to model of Jackson and Faul, 2010 10.1016/j.pepi.2010.09.005 (default case) and 2 refers to model of Behn et al., 2009 10.1016/j.epsl.2009.03.014. 
 Now let us say you want to used different grain size, oscillation period and material file then you can do the following:
 ```powershell
 PS C:\Users\kumar\work\V2RhoT_Gibbs_projects\V2RhoT_gibbs_opt\V2RhoT_gibbs> python parallel_conversion.py -p 6 -i Test_parallel.dat -o Test_parallel_user_options.csv -g 5.0 -s 50.0 -m DMM_7km_HP
@@ -124,7 +135,8 @@ Options that we are using in the above example are:
 - `-g 5.0` : here we are using grain size of 5 mm.
 - `-s 50.0` : here we are using oscillation period of 50 seconds
 - `-m DMM_7km_HP` : here we are using a material file called `DMM_7km_HP` which is provided in the databases folder.
-
+- `-A 2` : here we are using attenuation model of Behn et al., 2009 10.1016/j.epsl.2009.03.014.
+- `-W 1000.0` : here we water content of 1000.0 H/10**6Si which is input for attenuation model 2. The defualt value is 50.0 which equivalant to dry conditions.
 This should produce the following output on the screen
 ```
 ###########################################
@@ -133,18 +145,23 @@ Total no of processes 6
 Input file is Test_parallel.dat
 Output file is Test_parallel_user_options.csv
 Material file is DMM_7km_HP
+Input folder is ./data_tomo
+Output folder is ./output
+Attenuation model is 2
 Grain size is 5.0 mm
 Oscillation period is 50.0 seconds
-
-###########################################  
-
-###########################################
-Output directory exists. It will be overwritted.
+COH is (used when Attenuation model is 2) 1000.0 H/10**6Si
 
 ###########################################
 
 ###########################################
-Time spent on loading data: 1.65 sec
+Output directory exists. It will be overwritten.
+
+###########################################
+Chose 2 Atten model.
+
+###########################################
+Time spent on loading data: 2.53 sec
 
 ###########################################
 
@@ -155,19 +172,19 @@ Length of chunk to run on each processor: 520
 ###########################################
 Started worker Process_1
 Started worker Process_2
+Process_1 worker finished in 0.04423450231552124 min.
 Started worker Process_3
+Process_2 worker finished in 0.045877655347188316 min.
 Started worker Process_4
-Process_1 worker finished in 0.030200382073720295 min.
+Process_3 worker finished in 0.05230891704559326 min.
 Started worker Process_5
-Process_2 worker finished in 0.034274494647979735 min.
-Process_3 worker finished in 0.032520941893259686 min.
+Process_4 worker finished in 0.049238912264506024 min.
 Started worker Process_6
-Process_4 worker finished in 0.03488987684249878 min.
-Process_5 worker finished in 0.030159648259480795 min.
-Process_6 worker finished in 0.023795111974080404 min.
+Process_5 worker finished in 0.04650991757710775 min.
+Process_6 worker finished in 0.0446491281191508 min.
 
 ###########################################
-Total execution time: 0.1 min
+Total execution time: 0.2 min
 Hope that was fast enough for you. If not then maybe try increasing no of processes with -p option
 Enjoy your conversion results in the output folder :)
 
