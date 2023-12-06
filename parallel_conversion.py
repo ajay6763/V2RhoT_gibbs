@@ -53,7 +53,7 @@ def main(argv):
             -O : output directory. Default is ./output\n\
             -o : output file name which will be saved in output folder\n\
             -m : name of the material file in databases folder. Default is DMM_HP\n\
-            -A : attenuation model flag: 1 for Jackson and Faul 2010, 2 for Behn et al., 2009. If you choose 2 then you will have to supply COH. See COH option.\n\
+            -A : attenuation model flag: 1 for Jackson and Faul 2010, 2 for Behn et al., 2009. If you choose 2 then you will have to supply COH. See -H option.\n\
             -g : grain size in mm. Default is 10mm\n\
             -s : oscillation period in seconds. Default is 75 seconds\n\
             -W : Water contnent in  H/10**6Si. Defualt is 50 H/10**6Si which almost dry. Note this will be used if you choose attenuation model 2.\n\
@@ -75,7 +75,7 @@ def main(argv):
                 -I : input directory. Default is ./data_tomo\n\
                 -O : output directory. Default is ./output\n\
                 -m : name of the material file in databases folder. Default is DMM_HP\n\
-                -A : attenuation model flag: 1 for Jackson and Faul 2010 (default model), 2 for Behn et al., 2009. If you choose 2 then you will have to supply COH. See COH option.\n\
+                -A : attenuation model flag: 1 for Jackson and Faul 2010 (default model), 2 for Behn et al., 2009. If you choose 2 then you will have to supply COH. See -H option.\n\
                 -g : grain size in mm. Default is 10mm\n\
                 -s : oscillation period in seconds. Default is 75 seconds\n\
                 -W : Water contnent in  H/10**6Si. Defualt is 50 H/10**6Si which almost dry. Note this will be used if you choose attenuation model 2.\n\
