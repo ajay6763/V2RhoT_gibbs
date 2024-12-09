@@ -57,9 +57,8 @@ def lookup_vs_P(vs,P,table):
         #print index, T_LitMod,P_LitMod
     '''
     return table[index,0]-273.0,table[index,2],table[index,3],table[index,4]
-
-def lookup_vs_P_accurate_prop_Christina(vs,P,table):
-    '''
+def lookup_vs_P_accurate_prop_dev(vs,P,table):
+    """
     
     This function looks up for the properties corresponsing to a Vs and P pair.
     Input:
@@ -76,20 +75,86 @@ def lookup_vs_P_accurate_prop_Christina(vs,P,table):
     node velocity I pick the properties from that node. If not then I ask which way,
     up of down, difference between the observed and node velocity is minimum and
     take the average of the properties at the minimum L2 norm node and up or down node.
-    '''
-    index=[];Vp=[];Vs=[];Dens=[];T=[];P_out=[];melt=[]
+    """
+    index=[]
+    Vp=[]
+    Vs=[]
+    Dens=[]
+    T=[]
+    P_out=[]
+    P_diff=[]
+    melt=[]
     #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
-    # Ditance
     dist=np.array(((vs-table[:,4])**2+(P-table[:,1])**2)**0.5);
-    index=dist.argmin(); #minimum index according to P-T grid
+    index=dist.argmin();
 
     diff_vs=table[index,4] - vs
     diff_vs_up=table[index-1,4] - vs
+    diff_vs_down=table[index+1,4] - vs
 
-    #THIS IS CHANGED: only calc diff_vs_down if index is in range of table
-    is_table_size_equal_to_index = table.shape[0] == index +1
-    if (not is_table_size_equal_to_index):
-        diff_vs_down=table[index+1,4] - vs
+    if diff_vs==0:
+        P_diff=table[index,0]-P
+        T=table[index,0]-273.0
+        P_out=table[index,1]
+        Dens=table[index,2]
+        Vp=table[index,3]
+        Vs=table[index,4]
+        melt=table[index,5]
+    elif diff_vs_up<diff_vs_down:
+        P_diff=(table[index,1]+table[index-1,1])/2-P
+        T=-273.0+(table[index,0]+table[index-1,0])/2
+        P_out=(table[index,1]+table[index-1,1])/2
+        Dens=(table[index,2]+table[index-1,2])/2
+        Vp=(table[index,3]+table[index-1,3])/2
+        Vs=(table[index,4]+table[index-1,4])/2
+        melt=table[index,5]
+        melt=(table[index,5]+table[index-1,5])/2
+
+    else:
+        P_diff=(table[index,1]+table[index-1,1])/2-P
+        T=-273.0+(table[index,0]+table[index+1,0])/2
+        P_out=(table[index,1]+table[index+1,1])/2
+        Dens=(table[index,2]+table[index+1,2])/2
+        Vp=(table[index,3]+table[index+1,3])/2
+        Vs=(table[index,4]+table[index+1,4])/2
+        melt=table[index,5]
+        melt=(table[index,5]+table[index+1,5])/2
+
+        #print index, T_LitMod,P_LitMod
+    return P_out,T,Dens,Vp,Vs,melt
+def lookup_vs_P_accurate_prop(vs,P,table):
+    """
+    
+    This function looks up for the properties corresponsing to a Vs and P pair.
+    Input:
+    Vs - km/s
+    Pressure - Pascal
+    Table - look up table 
+    Output:
+    Pressure,Temperature,Density,Vp,Vs,melt_fraction
+    
+    This function is a bit accurate than the minimum of the L2 norm.
+    So, what I am doing is that first I look for the minimum of the L2 norm, then
+    I look for the difference between the observed velocity and node above and below.
+    In case if the L2 norm give "bulls eye" hit where observed velocity matches the
+    node velocity I pick the properties from that node. If not then I ask which way,
+    up of down, difference between the observed and node velocity is minimum and
+    take the average of the properties at the minimum L2 norm node and up or down node.
+    """
+    index=[]
+    Vp=[]
+    Vs=[]
+    Dens=[]
+    T=[]
+    P_out=[]
+    melt=[]
+    #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
+    dist=np.array(((vs-table[:,4])**2+(P-table[:,1])**2)**0.5);
+    index=dist.argmin();
+
+    diff_vs=table[index,4] - vs
+    diff_vs_up=table[index-1,4] - vs
+    diff_vs_down=table[index+1,4] - vs
 
     if diff_vs==0:
         T=table[index,0]-273.0
@@ -98,9 +163,7 @@ def lookup_vs_P_accurate_prop_Christina(vs,P,table):
         Vp=table[index,3]
         Vs=table[index,4]
         melt=table[index,5]
-        
-    #if index would be out of range, just take the lower index, if not proceed like the script before
-    elif is_table_size_equal_to_index or diff_vs_up<diff_vs_down:
+    elif diff_vs_up<diff_vs_down:
         T=-273.0+(table[index,0]+table[index-1,0])/2
         P_out=(table[index,1]+table[index-1,1])/2
         Dens=(table[index,2]+table[index-1,2])/2
@@ -108,6 +171,7 @@ def lookup_vs_P_accurate_prop_Christina(vs,P,table):
         Vs=(table[index,4]+table[index-1,4])/2
         melt=table[index,5]
         melt=(table[index,5]+table[index-1,5])/2
+
     else:
         T=-273.0+(table[index,0]+table[index+1,0])/2
         P_out=(table[index,1]+table[index+1,1])/2
@@ -116,85 +180,7 @@ def lookup_vs_P_accurate_prop_Christina(vs,P,table):
         Vs=(table[index,4]+table[index+1,4])/2
         melt=table[index,5]
         melt=(table[index,5]+table[index+1,5])/2
-        
-    return P_out,T,Dens,Vp,Vs,melt
-def lookup_vs_P_accurate_prop(vs,P,table):
-    '''
-    This function looks up for the properties corresponsing to a Vs and P pair.
-    Input:
-    Vs - km/s
-    Pressure - Pascal
-    Table - look up table 
-    Output:
-    Pressure,Temperature,Density,Vp,Vs,melt_fraction
-    This function is a bit accurate than the minimum of the L2 norm.
-    So, what I am doing is that first I look for the minimum of the L2 norm, then
-    I look for the difference between the observed velocity and node above and below.
-    In case if the L2 norm give "bulls eye" hit where observed velocity matches the
-    node velocity I pick the properties from that node. If not then I ask which way,
-    up of down, difference between the observed and node velocity is minimum and
-    take the average of the properties at the minimum L2 norm node and up or down node.
-    '''
-    index=[];Vp=[];Vs=[];Dens=[];T=[];P_out=[];melt=[]
-    #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
-    # Ditance
-    dist=np.array(((vs-table[:,4])**2+(P-table[:,1])**2)**0.5);
-    index=dist.argmin(); #minimum index according to P-T grid
-    diff_vs=table[index,4] - vs # difference between tomography vs and the table vs
-    # fetch the properties
-    T=table[index,0]-273.0
-    P_out=table[index,1]
-    Dens=table[index,2]
-    Vp=table[index,3]
-    Vs=table[index,4]
-    melt=table[index,5]
 
-    ### treatment in case picked properties are off the tomography vs
-    if diff_vs==0: # in case of bulls eye hit
-        pass
-    else: # in case of no bulls eye hit
-        if index==0: # in case at the start of the table
-            diff_vs_down=table[index+1,4] - vs # velocity difference in the next node
-            if diff_vs_down<diff_vs: # check if the difference in the next node is less
-                T=-273.0+(table[index,0]+table[index+1,0])/2
-                P_out=(table[index,1]+table[index+1,1])/2
-                Dens=(table[index,2]+table[index+1,2])/2
-                Vp=(table[index,3]+table[index+1,3])/2
-                Vs=(table[index,4]+table[index+1,4])/2
-                melt=(table[index,5]+table[index+1,5])/2
-            else:
-                pass
-        elif index==table.shape[0]-1: # in case at the end of the table
-            diff_vs_up=table[index-1,4] - vs # velocity difference in the previous node
-            if diff_vs_up<diff_vs: # check if the difference in the previouse node is less
-                T=-273.0+(table[index,0]+table[index-1,0])/2
-                P_out=(table[index,1]+table[index-1,1])/2
-                Dens=(table[index,2]+table[index-1,2])/2
-                Vp=(table[index,3]+table[index-1,3])/2
-                Vs=(table[index,4]+table[index-1,4])/2
-                melt=(table[index,5]+table[index-1,5])/2
-            else:
-                pass
-        else: # in case at the middle of the table
-            diff_vs_up=table[index-1,4] - vs # velocity difference in the previous node
-            diff_vs_down=table[index+1,4] - vs # velocity difference in the next node
-            if diff_vs_up<diff_vs_down: # check if the difference in the previouse node is less than in the next node
-                T=-273.0+(table[index,0]+table[index-1,0])/2
-                P_out=(table[index,1]+table[index-1,1])/2
-                Dens=(table[index,2]+table[index-1,2])/2
-                Vp=(table[index,3]+table[index-1,3])/2
-                Vs=(table[index,4]+table[index-1,4])/2
-                melt=(table[index,5]+table[index-1,5])/2
-            elif diff_vs_up>diff_vs_down:   # check if the difference in the previouse node is greater than in the next node 
-                T=-273.0+(table[index,0]+table[index+1,0])/2
-                P_out=(table[index,1]+table[index+1,1])/2
-                Dens=(table[index,2]+table[index+1,2])/2
-                Vp=(table[index,3]+table[index+1,3])/2
-                Vs=(table[index,4]+table[index+1,4])/2
-                melt=(table[index,5]+table[index+1,5])/2
-            else:
-                print('Something is wronge with input data and/or material table')
-                quit()
         #print index, T_LitMod,P_LitMod
     return P_out,T,Dens,Vp,Vs,melt
 
@@ -278,7 +264,7 @@ def atten_correction_Behn2009(T,P,Vp,Vs,oscill,d,COH):
 
 
 def atten_correction_Behn2009_crust(T,P,Vp,Vs,oscill,d,COH):
-    '''
+    """
     Behn et al., 2009 https://doi.org/10.1016/j.epsl.2009.03.014
     Input:
     T - Kelvin
@@ -288,7 +274,7 @@ def atten_correction_Behn2009_crust(T,P,Vp,Vs,oscill,d,COH):
     d - meter
     COH
     Output:
-    '''
+    """
     frequency   =   1/oscill # CHECK THIS FOR OMEGA
     R           =   8.314    # gas constant
     pi          =   3.1415926 #------------ shephard;s pie :)
@@ -326,8 +312,8 @@ def atten_correction_Behn2009_crust(T,P,Vp,Vs,oscill,d,COH):
     return Vp_correc,Vs_correc
 
 def atten_correction_J_2002(T,P,Vp,Vs,oscill,grain_size):
-    '''
-    '''
+    """
+    """
     ## Parameters from Jackson et al. 2002
     A      = 750       #------------ Pre-exponential factor
     alfa   = 0.36      #------------ frequency dependence
@@ -411,9 +397,9 @@ def melt_frac(T,T_l,T_s):
 
 ## melt fraction - crust
 def melt_frac_crust(T,P):
-    '''
+    """
     Hirschmann, 2000 and Winter, 2010
-    '''
+    """
     T_s_c = 920 + 156*P
     T_l_c = 1120 + 156*P
     melt = (T - T_s_c)/(T_l_c - T_s_c)
@@ -421,9 +407,9 @@ def melt_frac_crust(T,P):
 
 ## melt fraction - mantle
 def melt_frac_mantle_Hirschmann(T,P):
-    '''
+    """
     Hirschmann, 2000 and Winter, 2010
-    '''
+    """
     T_s_m = 1080.0 + 134.2*P - 6.581*P**2 + 0.1054*P**3
     T_l_m = 1762.0 + 57.46*P  - 3.487*P**2 + 0.077*P**3
     melt  = (T - T_s_m)/(T_l_m - T_s_m)
@@ -431,22 +417,22 @@ def melt_frac_mantle_Hirschmann(T,P):
 
 ## melt fraction - mantle
 def melt_frac_mantle_Katz(T,P):
-    '''
+    """
     Katz et al. 2003
     T_solidus = A1 + A2*P + A3*P**2
     T_liquidus_lherzo = B1 + B2*P + B3*P**2
     T_liquidus = C1 + C2*P + C3*P**2, this more general for arguments see Katz et al. 2003. Hence I am using this one.
     This basically means using different coefficients from Table 2 of Katz et al. 2003
-    '''
+    """
     T_s_m = 1085.7 + 132.9*P - 5.1*P**2
     T_l_m = 1780.0 + 45.0*P  - 2.0*P**2
     melt  = (T - T_s_m)/(T_l_m - T_s_m)
     return melt
 
 def velocity_melt_correction_mantle_Hammond_Humphreys(T,P,Vp,Vs):
-    '''
+    """
     Hammond_Humphreys
-    '''
+    """
     ## get the melt fraction at the P and T
     melt_frac = melt_frac_mantle_Hirschmann(T,P)
     #########################
@@ -470,7 +456,7 @@ def velocity_melt_correction_mantle_Hammond_Humphreys(T,P,Vp,Vs):
     return Vp_corrected,Vs_corrected, melt_frac
 
 def velocity_melt_correction_mantle_Chantel_2016(T,P,Vp,Vs):
-    '''
+    """
     From Cahntle et al 2016 Sci. Adv.
     Reduction in Vp and Vs as a functoion of melts
     The curves in this paper have absolute value of Vp and Vs
@@ -479,7 +465,7 @@ def velocity_melt_correction_mantle_Chantel_2016(T,P,Vp,Vs):
     with the anharmonic velocity. This means that I am simply moving
     correction up or down (scaling and up-scaling?) for all
     pressure ranges i.e. depth levels.
-    '''
+    """
     ## get the melt fraction at the P and T
     melt_frac = melt_frac_mantle_Katz(T,P)
     #########################
@@ -579,11 +565,11 @@ def lookup_T_P_accurate(T,P,table):
     return P_out,T_out,Dens,Vp,Vs,melt
 
 def mantle_melt_atten_correction(Table,grain_size,oscillation):
-    '''
+    """
     Table : perplex table
     grain_size : grain size in mm.
     oscilation: oscillation period in seconds.
-    '''
+    """
     # correction using grain size = 10 mm and oscillatio period of 75 seconds.
     # Attenuation model of Jackson and Faul 2010
     # Function: lib.atten_correction (T (oC),P (Pascal),Vp (km/s),Vs (km/s),oscilation period (s), grain size (mm))
@@ -615,11 +601,11 @@ def mantle_melt_atten_correction_Behn2009(Table,grain_size,oscillation,COH):
     Table : perplex table
     grain_size : grain size in mm.
     oscilation: oscillation period in seconds.
-    '''
+    """
     # correction using grain size = 10 mm and oscillatio period of 75 seconds.
     # Attenuation model of Jackson and Faul 2010
     # Function: lib.atten_correction (T (oC),P (Pascal),Vp (km/s),Vs (km/s),oscilation period (s), grain size (mm))
-    '''
+    """
     atten_correction_Behn2009(T,P,Vp,Vs,oscill,grain_size,COH):
     Behn et al., 2009 https://doi.org/10.1016/j.epsl.2009.03.014
     Input:
@@ -652,16 +638,16 @@ def mantle_melt_atten_correction_Behn2009(Table,grain_size,oscillation,COH):
     return Table_atten_melt_corrected
 
 def mantle_melt_atten_correction_Behn2009_crust(Table,grain_size,oscillation,COH):
-    '''
+    """
     Table : perplex table
     grain_size : grain size in mm.
     oscilation: oscillation period in seconds.
-    '''
+    """
     # correction using grain size = 10 mm and oscillatio period of 75 seconds.
     # Attenuation model of Jackson and Faul 2010
     # Function: lib.atten_correction (T (oC),P (Pascal),Vp (km/s),Vs (km/s),oscilation period (s), grain size (mm))
     Table_atten_corrected = np.copy(Table)
-    '''
+    """
     atten_correction_Behn2009(T,P,Vp,Vs,oscill,grain_size,COH):
     Behn et al., 2009 https://doi.org/10.1016/j.epsl.2009.03.014
     Input:
@@ -671,7 +657,7 @@ def mantle_melt_atten_correction_Behn2009_crust(Table,grain_size,oscillation,COH
     oscill - time period (seconds) 
     d - meter
     Output:
-   ''' 
+   """ 
     for i in range(len(Table_atten_corrected)):
         Table_atten_corrected[i,3],Table_atten_corrected[i,4] = atten_correction_Behn2009_crust(Table_atten_corrected[i,0],Table_atten_corrected[i,1]*1e5,
                                                              Table_atten_corrected[i,3],Table_atten_corrected[i,4],oscillation,grain_size/1e3,COH)
