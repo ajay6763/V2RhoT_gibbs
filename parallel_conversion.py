@@ -118,10 +118,10 @@ def main(argv):
 
         # Load table
         try:
-            DMM_no_atten = np.loadtxt(str(path)+'./databases/'+str(materialfile),comments='#')
+            DMM_no_atten = np.loadtxt(str(path)+'/databases/'+str(materialfile),comments='#')
         except:
             print('\n###########################################')
-            print('Could not find the material file',str(path)+'./databases/'+str(materialfile),'\nMake sure you have this file.')
+            print('Could not find the material file',str(path)+'/databases/'+str(materialfile),'\nMake sure you have this file.')
             sys.exit(0)
             print('\n###########################################')
         ########################################
@@ -140,7 +140,7 @@ def main(argv):
         DMM_atten_melt_corrected = np.copy(DMM_atten_corrected)
         melt = np.zeros_like(DMM_atten_melt_corrected[:,0])
         for i in range(len(DMM_atten_melt_corrected)):
-            DMM_atten_melt_corrected[i,3],DMM_atten_melt_corrected[i,4],melt[i] = lib.velocity_melt_correction_mantle(DMM_atten_melt_corrected[i,0]-273.15,
+            DMM_atten_melt_corrected[i,3],DMM_atten_melt_corrected[i,4],melt[i] = lib.velocity_melt_correction_mantle_Hammond_Humphreys(DMM_atten_melt_corrected[i,0]-273.15,
                                                                                                     DMM_atten_melt_corrected[i,1]/10000,
                                                                     DMM_atten_melt_corrected[i,3],DMM_atten_melt_corrected[i,4])
         #DMM_atten_melt_corrected[:,5]=0
