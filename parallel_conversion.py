@@ -4,24 +4,39 @@ import numpy as np
 import V2RhoT_gibbs_lib as lib
 
 
-def worker(name, data, table,outdir: str) -> None:
+def worker(name, data, table,outdir,velocityflag: str) -> None:
     print(f'Started worker {name}')
     ## run conversion here
     systime = time.time()
     #out_gibbs=lib.vel_to_temp(data[:,2],data[:,3],table)
-    out_gibbs=lib.vel_to_temp_prop_out(data[:,2],data[:,3],table)
-    out_save=np.zeros_like(data[:,1])
-    out_save=data[:,0]
-    out_save=np.column_stack((out_save,data[:,1]))
-    out_save=np.column_stack((out_save,out_gibbs[:,0]))
-    out_save=np.column_stack((out_save,out_gibbs[:,1]))
-    out_save=np.column_stack((out_save,out_gibbs[:,2]))
-    out_save=np.column_stack((out_save,out_gibbs[:,3]))
-    out_save=np.column_stack((out_save,out_gibbs[:,4]))
-    out_save=np.column_stack((out_save,out_gibbs[:,5]))
-    out_save=np.column_stack((out_save,out_gibbs[:,6]))
-    out_save=np.column_stack((out_save,out_gibbs[:,7]))
-    np.savetxt(str(outdir)+"/"+str(name)+'_vel_converted.txt',out_save,header="#x(km) y(km) depth(km) Pressure(bar) Temperature(oC) Density(kg/m3) Vp(km/s) Vs(km/s) Vs_diff(%) Pseudo-metls(%)",comments='',fmt='%10.3f')
+    if velocityflag == 0:
+        out_gibbs=lib.vel_vs_to_temp_prop_out(data[:,2],data[:,3],table)
+        out_save=np.zeros_like(data[:,1])
+        out_save=data[:,0]
+        out_save=np.column_stack((out_save,data[:,1]))
+        out_save=np.column_stack((out_save,out_gibbs[:,0]))
+        out_save=np.column_stack((out_save,out_gibbs[:,1]))
+        out_save=np.column_stack((out_save,out_gibbs[:,2]))
+        out_save=np.column_stack((out_save,out_gibbs[:,3]))
+        out_save=np.column_stack((out_save,out_gibbs[:,4]))
+        out_save=np.column_stack((out_save,out_gibbs[:,5]))
+        out_save=np.column_stack((out_save,out_gibbs[:,6]))
+        out_save=np.column_stack((out_save,out_gibbs[:,7]))
+        np.savetxt(str(outdir)+"/"+str(name)+'_vel_converted.txt',out_save,header="#x(km) y(km) depth(km) Pressure(bar) Temperature(oC) Density(kg/m3) Vp(km/s) Vs(km/s) Vs_diff(%) Pseudo-metls(%)",comments='',fmt='%10.3f')
+    elif velocityflag == 1:
+        out_gibbs=lib.vel_vp_to_temp_prop_out(data[:,2],data[:,3],table)
+        out_save=np.zeros_like(data[:,1])
+        out_save=data[:,0]
+        out_save=np.column_stack((out_save,data[:,1]))
+        out_save=np.column_stack((out_save,out_gibbs[:,0]))
+        out_save=np.column_stack((out_save,out_gibbs[:,1]))
+        out_save=np.column_stack((out_save,out_gibbs[:,2]))
+        out_save=np.column_stack((out_save,out_gibbs[:,3]))
+        out_save=np.column_stack((out_save,out_gibbs[:,4]))
+        out_save=np.column_stack((out_save,out_gibbs[:,5]))
+        out_save=np.column_stack((out_save,out_gibbs[:,6]))
+        out_save=np.column_stack((out_save,out_gibbs[:,7]))        
+        np.savetxt(str(outdir)+"/"+str(name)+'_vel_converted.txt',out_save,header="#x(km) y(km) depth(km) Pressure(bar) Temperature(oC) Density(kg/m3) Vp(km/s) Vs(km/s) Vp_diff(%) Pseudo-metls(%)",comments='',fmt='%10.3f')
     #np.savetxt(str(outdir)+"/"+str(name)+'_vel_converted.txt',out_save,header="#x(km) y(km) depth(km) Pressure(bar) Temperature(oC) Density(kg/m3) Vp (km/s) Vs (km/s) Vs_diff(km/s)",comments='',fmt='%10.3f')
     worker_time=(time.time()-systime)/60.0
     print(f'{name} worker finished in {worker_time} min.')
@@ -29,6 +44,7 @@ def worker(name, data, table,outdir: str) -> None:
 def main(argv):
     no_of_processes     = int(1)
     inputfile           = str('')
+    velocityflag        = int(0)
     outputfile          = str('conversion_out.txt')
     materialfile        = str('DMM_HP')
     inputdir            = str('./data_tomo')
@@ -39,7 +55,7 @@ def main(argv):
     COH_val 	        = float(50.0)
     #oscillation_period  = 75
     try :
-        opts,args = getopt.getopt(argv,"h:p:I:i:O:o:m:A:g:s:W:",["idir","ifile","odir","ofile","mfile","Amodel","gsize","operiod","water"])
+        opts,args = getopt.getopt(argv,"h:p:I:i:v:O:o:m:A:g:s:W:",["idir","ifile","vflag","odir","ofile","mfile","Amodel","gsize","operiod","water"])
         #print(opts)
         #print(args)
     except getopt.GetoptError:
@@ -50,6 +66,7 @@ def main(argv):
             -p : no of parts to run in parallel (e.g., no of available cores). Default is 1\n\
             -I : input directory. Default is ./data_tomo\n\
             -i : input file name in the data_tomo folder. Format x(*) y(*) depth(km) Vs(km/s)\n\
+            -v : Flag for Vp-->1 or Vs-->0 in the input file. Default if 0 i.e., Vs\n\
             -O : output directory. Default is ./output\n\
             -o : output file name which will be saved in output folder\n\
             -m : name of the material file in databases folder. Default is DMM_HP\n\
@@ -71,6 +88,7 @@ def main(argv):
                 -h : help\n\
                 -p : no of parts to run in parallel (e.g., no of available cores). Default is 1\n\
                 -i : input file name in the data_tomo folder. Format x(*) y(*) depth(km) Vs(km/s)\n\
+                -v : Flag for Vp-->1 or Vs-->0 in the input file. Default if 0 i.e., Vs\n\
                 -o : output file name which will be saved in output folder\n\
                 -I : input directory. Default is ./data_tomo\n\
                 -O : output directory. Default is ./output\n\
@@ -87,6 +105,8 @@ def main(argv):
                 no_of_processes = int(arg)
             elif opt in ("-i", "--ifile"):
                 inputfile = arg
+            elif opt in ("-v", "--vflag"):
+                velocityflag = int(arg)
             elif opt in ("-o", "--ofile"):
                 outputfile = arg
             elif opt in ("-I", "--idir"):
@@ -109,6 +129,7 @@ def main(argv):
         print('Your options are:')
         print('Total no of processes',no_of_processes)    
         print('Input file is', inputfile)
+        print('Input velocity is (Vp-->1 Vs-->0)', velocityflag)
         print('Output file is', outputfile)
         print('Material file is', materialfile)
         print('Input folder is', inputdir)
@@ -204,7 +225,7 @@ def main(argv):
             else:
                 end_index   = start_index + no_of_parts  
             process = multiprocessing.Process(target=worker, 
-                                            args=(f'Process_{i+1}',tomo_in[start_index:end_index,:],table,outputdir))
+                                            args=(f'Process_{i+1}',tomo_in[start_index:end_index,:],table,outputdir,velocityflag))
             processes.append(process)
             process.start()
         for proc in processes:
@@ -224,8 +245,10 @@ def main(argv):
         for i in range(1,no_of_processes):
             out = np.loadtxt(str(outputdir)+'/Process_'+str(i+1)+'_vel_converted.txt',comments='#') 
             out_save=np.append(out_save,out,axis=0)
-        np.savetxt(str(outputdir)+'/'+str(outputfile),out_save,delimiter=',',header="#x(km), y(km), depth(km), Pressure(bar), Temperature(oC), Density(kg/m3), Vp(km/s), Vs(km/s), Vs_diff(%), Pseudo-melts(%)",comments=meta_data,fmt='%10.3f')
-        
+        if velocityflag == 0:
+            np.savetxt(str(outputdir)+'/'+str(outputfile),out_save,delimiter=',',header="#x(km), y(km), depth(km), Pressure(bar), Temperature(oC), Density(kg/m3), Vp(km/s), Vs(km/s), Vs_diff(%), Pseudo-melts(%)",comments=meta_data,fmt='%10.3f')
+        elif velocityflag == 1:
+            np.savetxt(str(outputdir)+'/'+str(outputfile),out_save,delimiter=',',header="#x(km), y(km), depth(km), Pressure(bar), Temperature(oC), Density(kg/m3), Vp(km/s), Vs(km/s), Vp_diff(%), Pseudo-melts(%)",comments=meta_data,fmt='%10.3f')        
     else:
         print('\n###########################################')
         print('You did not provide required input.')
