@@ -196,6 +196,85 @@ def lookup_vs_P_accurate_prop_dev(vs,P,table):
                 quit()
         #print index, T_LitMod,P_LitMod
     return P_out,T,Dens,Vp,Vs,melt
+def lookup_vp_P_accurate_prop_dev(vp,P,table):
+    '''
+    This function looks up for the properties corresponsing to a Vs and P pair.
+    Input:
+    Vp - km/s
+    Pressure - Pascal
+    Table - look up table 
+    Output:
+    Pressure,Temperature,Density,Vp,Vs,melt_fraction
+    This function is a bit accurate than the minimum of the L2 norm.
+    So, what I am doing is that first I look for the minimum of the L2 norm, then
+    I look for the difference between the observed velocity and node above and below.
+    In case if the L2 norm give "bulls eye" hit where observed velocity matches the
+    node velocity I pick the properties from that node. If not then I ask which way,
+    up of down, difference between the observed and node velocity is minimum and
+    take the average of the properties at the minimum L2 norm node and up or down node.
+    '''
+    index=[];Vp=[];Vs=[];Dens=[];T=[];P_out=[];melt=[]
+    #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
+    # Ditance
+    dist=np.array(((vp-table[:,3])**2+(P-table[:,1])**2)**0.5);
+    index=dist.argmin(); #minimum index according to P-T grid
+    diff_vp=table[index,3] - vp # difference between tomography vs and the table vs
+    # fetch the properties
+    T=table[index,0]-273.0
+    P_out=table[index,1]
+    Dens=table[index,2]
+    Vp=table[index,3]
+    Vs=table[index,4]
+    melt=table[index,5]
+
+    ### treatment in case picked properties are off the tomography vs
+    if diff_vp==0: # in case of bulls eye hit
+        pass
+    else: # in case of no bulls eye hit
+        if index==0: # in case at the start of the table
+            diff_vp_down=table[index+1,3] - vp # velocity difference in the next node
+            if diff_vp_down<diff_vp: # check if the difference in the next node is less
+                T=-273.0+(table[index,0]+table[index+1,0])/2
+                P_out=(table[index,1]+table[index+1,1])/2
+                Dens=(table[index,2]+table[index+1,2])/2
+                Vp=(table[index,3]+table[index+1,3])/2
+                Vs=(table[index,4]+table[index+1,4])/2
+                melt=(table[index,5]+table[index+1,5])/2
+            else:
+                pass
+        elif index==table.shape[0]-1: # in case at the end of the table
+            diff_vp_up=table[index-1,3] - vp # velocity difference in the previous node
+            if diff_vp_up<diff_vp: # check if the difference in the previouse node is less
+                T=-273.0+(table[index,0]+table[index-1,0])/2
+                P_out=(table[index,1]+table[index-1,1])/2
+                Dens=(table[index,2]+table[index-1,2])/2
+                Vp=(table[index,3]+table[index-1,3])/2
+                Vs=(table[index,4]+table[index-1,4])/2
+                melt=(table[index,5]+table[index-1,5])/2
+            else:
+                pass
+        else: # in case at the middle of the table
+            diff_vp_up=table[index-1,3] - vp # velocity difference in the previous node
+            diff_vp_down=table[index+1,3] - vp # velocity difference in the next node
+            if diff_vp_up<diff_vp_down: # check if the difference in the previouse node is less than in the next node
+                T=-273.0+(table[index,0]+table[index-1,0])/2
+                P_out=(table[index,1]+table[index-1,1])/2
+                Dens=(table[index,2]+table[index-1,2])/2
+                Vp=(table[index,3]+table[index-1,3])/2
+                Vs=(table[index,4]+table[index-1,4])/2
+                melt=(table[index,5]+table[index-1,5])/2
+            elif diff_vp_up>diff_vp_down:   # check if the difference in the previouse node is greater than in the next node 
+                T=-273.0+(table[index,0]+table[index+1,0])/2
+                P_out=(table[index,1]+table[index+1,1])/2
+                Dens=(table[index,2]+table[index+1,2])/2
+                Vp=(table[index,3]+table[index+1,3])/2
+                Vs=(table[index,4]+table[index+1,4])/2
+                melt=(table[index,5]+table[index+1,5])/2
+            else:
+                print('Something is wronge with input data and/or material table')
+                quit()
+        #print index, T_LitMod,P_LitMod
+    return P_out,T,Dens,Vp,Vs,melt
 def lookup_vs_P_accurate_prop(vs,P,table):
     """
     
@@ -833,7 +912,7 @@ def vel_to_temp(depth,Vs,Table):
 
     return out
 
-def vel_to_temp_prop_out(depth,Vs,Table):
+def vel_vs_to_temp_prop_out(depth,Vs,Table):
     '''
     Input:
     depth : depth column in km.
@@ -873,6 +952,49 @@ def vel_to_temp_prop_out(depth,Vs,Table):
     out=np.column_stack((out,Vp_out))
     out=np.column_stack((out,Vs_out))
     out=np.column_stack((out,diff_Vs))
+    out=np.column_stack((out,melt_out))
+
+    return out
+def vel_vp_to_temp_prop_out(depth,Vp,Table):
+    '''
+    Input:
+    depth : depth column in km.
+    Vp    : tomography Vp velocity in km/s.
+    Table : Perplex lookup table corrected form anelasticity and melt effects.
+
+    Output:
+
+    '''
+    Temperature_out = []#np.zeros_like(tomo[:,1])
+    Density_out     = []#np.zeros_like(tomo[:,1])
+    melt_out     = [] #np.zeros_like(tomo[:,1])
+    Vp_out     = [] #np.zeros_like(tomo[:,1])
+    Vs_out     = [] #np.zeros_like(tomo[:,1])
+    diff_Vp         = []
+    P_out           = []
+    #Vp_out          = []#np.zeros_like(tomo[:,1])
+    #Vs_out          = []#np.zeros_like(tomo[:,1])
+    for i in range(len(depth)):
+        P  = pressure_inter(depth[i])
+        Vp_in = Vp[i]
+        P_table,temp,dens,vp,vs,m=lookup_vp_P_accurate_prop_dev(Vp_in,P.tolist(),Table)
+        #Vp_out.append(vp)
+        #Vs_out.append(vs)
+        P_out.append(P_table)
+        Temperature_out.append(temp)
+        Density_out.append(dens)
+        Vs_out.append(vs)
+        Vp_out.append(vp)
+        diff_Vp.append(((Vp_in-vp)/Vp_in)*100)
+        melt_out.append(m)
+    ### pasting the outputs to the input tomo table
+    out=depth;
+    out=np.column_stack((out,P_out))
+    out=np.column_stack((out,Temperature_out))
+    out=np.column_stack((out,Density_out))
+    out=np.column_stack((out,Vp_out))
+    out=np.column_stack((out,Vs_out))
+    out=np.column_stack((out,diff_Vp))
     out=np.column_stack((out,melt_out))
 
     return out
