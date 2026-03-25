@@ -3,38 +3,70 @@ import matplotlib.pyplot as plt
 from matplotlib.tri import Triangulation
 from scipy import interpolate
 import math
+import scipy as scipy
 
+def mantle_adiabat(Z,T_mantle=1320):
+    '''
+    This function computes mantle adiabat temperature at depth Z (in km)
+    T_mantle is potential temperature in oC
+    Output is temperature in oC
+    '''
+    
+    #Z= np.arange(1,max_depth) # km
+    alpha    = 3e-5 # oC-1
+    cp       = 1250 # J/kg/oC 
+    g        = 9.8 #m/s2
+    dT_dZ    = ((T_mantle*alpha*g)/cp)*1e3 # oC/km
+    #print('Adiabatic gradient (/km):',dT_dZ)
+    T = T_mantle + Z*dT_dZ
+    return T
+def mantle_solidus_Katz(P):
+    """
+    Katz et al. 2003
+    T_solidus = A1 + A2*P + A3*P**2
+    T_liquidus_lherzo = B1 + B2*P + B3*P**2
+    T_liquidus = C1 + C2*P + C3*P**2, this more general for arguments see Katz et al. 2003. Hence I am using this one.
+    This basically means using different coefficients from Table 2 of Katz et al. 2003
+    """
+    T_s_m = 1085.7 + 132.9*P - 5.1*P**2
+    T_l_m = 1780.0 + 45.0*P  - 2.0*P**2
+    #melt  = (T - T_s_m)/(T_l_m - T_s_m)
+    return T_s_m,T_l_m
+## melt fraction - mantle
+def mantle_solidus_Hirschmann(P):
+    '''
+    Docstring for mantle_solidus_Hirschmann
+    Hirschmann, 2000 and Winter, 2010
+
+    :param P: pressure in GPa 
+    
+    Output:
+    T solidus and T liquidus
+
+    '''
+    T_s_m = 1080.0 + 134.2*P - 6.581*P**2 + 0.1054*P**3
+    T_l_m = 1762.0 + 57.46*P  - 3.487*P**2 + 0.077*P**3
+    return T_s_m,T_l_m
 ########################################
 # Defining pressure function based on Ak133
 # I choose ak135 becaouse the pressures from the LitMod2D_2.0 ref model
 # are practically similar to ak135
 ########################################
-ak135 = np.loadtxt('./databases/ak135f.txt',skiprows=1)
+try:
+    ak135 = np.loadtxt('./databases/ak135f.txt',skiprows=1)
+except:
+    ak135 = np.loadtxt('/home/ajay/projects/V2RhoT_gibbs/databases/ak135f.txt',skiprows=1)
+
 ak135_P = 9.8*ak135[:,0]*1e3*ak135[:,1]*1e3*1e-5
-pressure_inter = interpolate.interp1d(ak135[:,0],ak135_P)
-depth_inter = interpolate.interp1d(ak135_P,ak135[:,0])
-
-def lithostatic_pressure(depth,density):
-    Pressure_lith = np.zeros_like(depth)
-    # Check is the first index is at zero depth or not
-    # If it is not then pressures is set equal rho*g*h
-    # else is it set to 0
-    if depth[0] != 0:
-        Pressure_lith[0] = density[0] * depth[0]* 9.8 * 1e3 * 1e-5
-    else:
-        #thickness = (depth[1]-depth[0]) #*1e3
-        Pressure_lith[0] = 0
-    # Now looping through depths
-    for j in range(len(depth)-2):
-        thickness = (depth[j+2] - depth [j+1]) *1e3
-        Pressure_lith[j+1]=Pressure_lith[j] + thickness*density[j+1] *9.8*1e-5
-
-    # fixing last index
-    Pressure_lith[-1] = Pressure_lith[-2] + (depth[-1] - depth [-2])*1e3 * density[-2]*9.8*1e-5
-    #print(depth[:],density[:],Pressure_lith[:])
-
-    p_func = interpolate.interp1d(depth,Pressure_lith)
-    return p_func
+#pressure_inter = interpolate.interp1d(ak135[:,0],ak135_P)
+#depth_inter = interpolate.interp1d(ak135_P,ak135[:,0])
+y2=ak135[:,1]*9.8
+gravity=9.8
+density=ak135[:,1]*1e3
+depth=ak135[:,0]*1e3
+pressure_int = scipy.integrate.cumulative_trapezoid(gravity * density, x=depth, initial=0)
+pressure_int=pressure_int*1e-5 # pascal to bar
+pressure_inter = interpolate.interp1d(ak135[:,0],pressure_int)
 
 def lookup_Vp_P(vp,P,table):
 	index=[]
@@ -193,7 +225,88 @@ def lookup_vs_P_accurate_prop_dev(vs,P,table):
                 melt=(table[index,5]+table[index+1,5])/2
             else:
                 print('Something is wronge with input data and/or material table')
-                quit()
+                exit()
+        #print index, T_LitMod,P_LitMod
+    return P_out,T,Dens,Vp,Vs,melt
+
+def lookup_vpvs_P_accurate_prop_dev(vpvs,P,table):
+    '''
+    This function looks up for the properties corresponsing to a Vp/vs and P pair.
+    Input:
+    Vs - km/s
+    Pressure - Pascal
+    Table - look up table 
+    Output:
+    Pressure,Temperature,Density,Vp,Vs,melt_fraction
+    This function is a bit accurate than the minimum of the L2 norm.
+    So, what I am doing is that first I look for the minimum of the L2 norm, then
+    I look for the difference between the observed velocity and node above and below.
+    In case if the L2 norm give "bulls eye" hit where observed velocity matches the
+    node velocity I pick the properties from that node. If not then I ask which way,
+    up of down, difference between the observed and node velocity is minimum and
+    take the average of the properties at the minimum L2 norm node and up or down node.
+    '''
+    index=[];Vp=[];Vs=[];Dens=[];T=[];P_out=[];melt=[]
+    #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
+    # Ditance
+    vp_vs_table=table[:,4]/table[:,3]
+    dist=np.array(((vpvs-table[:,4]/table[:,3])**2+(P-table[:,1])**2)**0.5);
+    index=dist.argmin(); #minimum index according to P-T grid
+    diff_vpvs=vp_vs_table[index] - vpvs # difference between tomography vs and the table vs
+    # fetch the properties
+    T=table[index,0]-273.0
+    P_out=table[index,1]
+    Dens=table[index,2]
+    Vp=table[index,3]
+    Vs=table[index,4]
+    melt=table[index,5]
+
+    ### treatment in case picked properties are off the tomography vs
+    if diff_vpvs==0: # in case of bulls eye hit
+        pass
+    else: # in case of no bulls eye hit
+        if index==0: # in case at the start of the table
+            diff_vs_down=vp_vs_table[index+1] - vpvs # velocity difference in the next node
+            if diff_vs_down<diff_vpvs: # check if the difference in the next node is less
+                T=-273.0+(table[index,0]+table[index+1,0])/2
+                P_out=(table[index,1]+table[index+1,1])/2
+                Dens=(table[index,2]+table[index+1,2])/2
+                Vp=(table[index,3]+table[index+1,3])/2
+                Vs=(table[index,4]+table[index+1,4])/2
+                melt=(table[index,5]+table[index+1,5])/2
+            else:
+                pass
+        elif index==table.shape[0]-1: # in case at the end of the table
+            diff_vs_up=vp_vs_table[index-1]- vpvs # velocity difference in the previous node
+            if diff_vs_up<diff_vpvs: # check if the difference in the previouse node is less
+                T=-273.0+(table[index,0]+table[index-1,0])/2
+                P_out=(table[index,1]+table[index-1,1])/2
+                Dens=(table[index,2]+table[index-1,2])/2
+                Vp=(table[index,3]+table[index-1,3])/2
+                Vs=(table[index,4]+table[index-1,4])/2
+                melt=(table[index,5]+table[index-1,5])/2
+            else:
+                pass
+        else: # in case at the middle of the table
+            diff_vs_up=vp_vs_table[index-1] - vpvs # velocity difference in the previous node
+            diff_vs_down=vp_vs_table[index+1] - vpvs # velocity difference in the next node
+            if diff_vs_up<diff_vs_down: # check if the difference in the previouse node is less than in the next node
+                T=-273.0+(table[index,0]+table[index-1,0])/2
+                P_out=(table[index,1]+table[index-1,1])/2
+                Dens=(table[index,2]+table[index-1,2])/2
+                Vp=(table[index,3]+table[index-1,3])/2
+                Vs=(table[index,4]+table[index-1,4])/2
+                melt=(table[index,5]+table[index-1,5])/2
+            elif diff_vs_up>diff_vs_down:   # check if the difference in the previouse node is greater than in the next node 
+                T=-273.0+(table[index,0]+table[index+1,0])/2
+                P_out=(table[index,1]+table[index+1,1])/2
+                Dens=(table[index,2]+table[index+1,2])/2
+                Vp=(table[index,3]+table[index+1,3])/2
+                Vs=(table[index,4]+table[index+1,4])/2
+                melt=(table[index,5]+table[index+1,5])/2
+            else:
+                print('Something is wronge with input data and/or material table')
+                exit()
         #print index, T_LitMod,P_LitMod
     return P_out,T,Dens,Vp,Vs,melt
 def lookup_vp_P_accurate_prop_dev(vp,P,table):
@@ -272,7 +385,7 @@ def lookup_vp_P_accurate_prop_dev(vp,P,table):
                 melt=(table[index,5]+table[index+1,5])/2
             else:
                 print('Something is wronge with input data and/or material table')
-                quit()
+                exit()
         #print index, T_LitMod,P_LitMod
     return P_out,T,Dens,Vp,Vs,melt
 def lookup_vs_P_accurate_prop(vs,P,table):
@@ -337,9 +450,9 @@ def lookup_vs_P_accurate_prop(vs,P,table):
         #print index, T_LitMod,P_LitMod
     return P_out,T,Dens,Vp,Vs,melt
 
-def atten_correction(T,P,Vp,Vs,oscill,grain_size):
+def atten_correction(T,P,Vp,Vs,oscill,grain_size,alfa=0.36,energy=293e3):
     '''
-    Jackson and Faul, 2010 and Kumar et al., 2020 
+    Jackson and Faul, 2010 and Kumar et al., 2020    
     Input:
     T - Kelvin
     P - Pascal
@@ -347,11 +460,11 @@ def atten_correction(T,P,Vp,Vs,oscill,grain_size):
     oscill - time period (seconds)
     d - meter
     Output:
-    Vp,Vs: km/s
+    Vp,Vs: km/s    
     '''
     ## Parameters from Jackson and Faule 2010, Kumar et al., 2020
     A      = 816       #------------ Pre-exponential factor
-    alfa   = 0.36      #------------ frequency dependence
+    #alfa   = 0.36      #------------ frequency dependence
     energi = 293.0E03  #------------ Activation energy
     volexp = 1.20E-05  #------------ Activation volume
     R      = 8.314472  #------------ Gas constant
@@ -399,8 +512,8 @@ def atten_correction_Behn2009(T,P,Vp,Vs,oscill,d,COH):
     Bo          =   1.28e8  # prefactor for Q for omega=0.122 s^-1
     COH_ref     =   50      # H/10^6 Si
     PQ_ref      =   300e6 # reference pressure in Pa;
-    rQ          =   1.2;
-    alpha       =   0.27;
+    rQ          =   1.2
+    alpha       =   0.27
 
     B = Bo*d_ref**(pq-pq_ref)*(COH/COH_ref)**rQ*math.exp(((EQ+PQ_ref*VQ)-(EQ_ref+PQ_ref*VQ_ref))/(R*TQ_ref))
     
@@ -444,8 +557,8 @@ def atten_correction_Behn2009_crust(T,P,Vp,Vs,oscill,d,COH):
     Bo          =   1.28e8  # prefactor for Q for omega=0.122 s^-1
     COH_ref     =   50      # H/10^6 Si
     PQ_ref      =   300e6 # reference pressure in Pa;
-    rQ          =   1.2;
-    alpha       =   0.27;
+    rQ          =   1.2
+    alpha       =   0.27
 
     B = Bo*d_ref**(pq-pq_ref)*(COH/COH_ref)**rQ*math.exp(((EQ+PQ_ref*VQ)-(EQ_ref+PQ_ref*VQ_ref))/(R*TQ_ref))
     
@@ -562,6 +675,8 @@ def melt_frac_crust(T,P):
 def melt_frac_mantle_Hirschmann(T,P):
     """
     Hirschmann, 2000 and Winter, 2010
+    P in GPa
+    
     """
     T_s_m = 1080.0 + 134.2*P - 6.581*P**2 + 0.1054*P**3
     T_l_m = 1762.0 + 57.46*P  - 3.487*P**2 + 0.077*P**3
@@ -584,7 +699,7 @@ def melt_frac_mantle_Katz(T,P):
 
 def velocity_melt_correction_mantle_Hammond_Humphreys(T,P,Vp,Vs):
     """
-    Hammond_Humphreys
+    Hammond_Humphreys¸
     """
     ## get the melt fraction at the P and T
     melt_frac = melt_frac_mantle_Hirschmann(T,P)
@@ -598,15 +713,17 @@ def velocity_melt_correction_mantle_Hammond_Humphreys(T,P,Vp,Vs):
     Vs_corrected = Vs - dVs
     '''
     if melt_frac > 0:
-        dVs = -5.3 * melt_frac #*100
-        dVp = -2.3 * melt_frac #*100
-        Vp_corrected = Vp + (dVp*Vp)/100
-        Vs_corrected = Vs + (dVs*Vs)/100
+        dVs = -5.3 * melt_frac*100
+        dVp = -2.3 * melt_frac*100
+        #Vp_corrected = Vp + (dVp*Vp)/100
+        #Vs_corrected = Vs + (dVs*Vs)/100
+        Vs_corrected = Vs*np.exp(dVs)
+        Vp_corrected = Vp*np.exp(dVp)
     else:
         Vp_corrected = Vp
         Vs_corrected = Vs
-        melt_frac    = 0
-    return Vp_corrected,Vs_corrected, melt_frac
+        melt_frac    = 0.
+    return Vp_corrected,Vs_corrected, melt_frac*100
 
 def velocity_melt_correction_mantle_Chantel_2016(T,P,Vp,Vs):
     """
@@ -623,15 +740,13 @@ def velocity_melt_correction_mantle_Chantel_2016(T,P,Vp,Vs):
     melt_frac = melt_frac_mantle_Katz(T,P)
     #########################
     if melt_frac > 0:
-        dVs = -5.3 * melt_frac #*100
-        dVp = -2.3 * melt_frac #*100
         Vp_corrected = 0.07*melt_frac**2  - 0.5566*melt_frac + Vp
         Vs_corrected = 0.065*melt_frac**2 - 0.5565*melt_frac + Vp
     else:
         Vp_corrected = Vp
         Vs_corrected = Vs
         melt_frac    = 0
-    return Vp_corrected,Vs_corrected, melt_frac
+    return Vp_corrected,Vs_corrected, melt_frac*100
 
 def velocity_melt_correction_crust(T,P,Vp,Vs):
     ## get the melt fraction at the P and T
@@ -646,15 +761,18 @@ def velocity_melt_correction_crust(T,P,Vp,Vs):
     Vs_corrected = Vs - dVs
     '''
     if melt_frac > 0:
-        dVs = -5.3 * melt_frac #*100
-        dVp = -2.3 * melt_frac #*100
-        Vp_corrected = Vp + (dVp*Vp)/100
-        Vs_corrected = Vs + (dVs*Vs)/100
+        dVs = -5.3 * melt_frac*100
+        dVp = -2.3 * melt_frac*100
+        #Vp_corrected = Vp + (dVp*Vp)/100
+        #Vs_corrected = Vs + (dVs*Vs)/100
+        Vs_corrected = Vs*np.exp(dVs)
+        Vp_corrected = Vp*np.exp(dVp)
     else:
         Vp_corrected = Vp
         Vs_corrected = Vs
         melt_frac    = 0.
-    return Vp_corrected,Vs_corrected, melt_frac
+    return Vp_corrected,Vs_corrected, melt_frac*100
+
 
 def lookup_T_P_accurate(T,P,table):
     '''
@@ -766,9 +884,10 @@ def mantle_melt_atten_correction_Behn2009(Table,grain_size,oscillation,COH):
     P - Pascal
     Vp,Vs - km/s 
     oscill - time period (seconds) 
-    d - meter
+    d - mm
+    COH- ppm
     Output:
-    COH
+
     '''
     Table_atten_corrected = np.copy(Table)
     
@@ -919,7 +1038,8 @@ def vel_vs_to_temp_prop_out(depth,Vs,Table):
     Vs    : tomography Vs velocity in km/s.
     Table : Perplex lookup table corrected form anelasticity and melt effects.
 
-    Output:
+    Output: Output: [depth,P_out,Temperature_out,Density_out,Vp_out,Vs_out,diff_Vp,melt_out)
+
 
     '''
     Temperature_out = []#np.zeros_like(tomo[:,1])
@@ -962,7 +1082,7 @@ def vel_vp_to_temp_prop_out(depth,Vp,Table):
     Vp    : tomography Vp velocity in km/s.
     Table : Perplex lookup table corrected form anelasticity and melt effects.
 
-    Output:
+    Output: [depth,P_out,Temperature_out,Density_out,Vp_out,Vs_out,diff_Vp,melt_out)
 
     '''
     Temperature_out = []#np.zeros_like(tomo[:,1])
@@ -995,6 +1115,50 @@ def vel_vp_to_temp_prop_out(depth,Vp,Table):
     out=np.column_stack((out,Vp_out))
     out=np.column_stack((out,Vs_out))
     out=np.column_stack((out,diff_Vp))
+    out=np.column_stack((out,melt_out))
+
+    return out
+
+def vel_vpvs_to_temp_prop_out(depth,VpVs,Table):
+    '''
+    Input:
+    depth : depth column in km.
+    Vp    : tomography Vp velocity in km/s.
+    Table : Perplex lookup table corrected form anelasticity and melt effects.
+
+    Output: [depth,P_out,Temperature_out,Density_out,Vp_out,Vs_out,diff_Vp,melt_out)
+
+    '''
+    Temperature_out = []#np.zeros_like(tomo[:,1])
+    Density_out     = []#np.zeros_like(tomo[:,1])
+    melt_out     = [] #np.zeros_like(tomo[:,1])
+    Vp_out     = [] #np.zeros_like(tomo[:,1])
+    Vs_out     = [] #np.zeros_like(tomo[:,1])
+    diff_VpVs         = []
+    P_out           = []
+    #Vp_out          = []#np.zeros_like(tomo[:,1])
+    #Vs_out          = []#np.zeros_like(tomo[:,1])
+    for i in range(len(depth)):
+        P  = pressure_inter(depth[i])
+        VpVs_in = VpVs[i]
+        P_table,temp,dens,vp,vs,m=lookup_vpvs_P_accurate_prop_dev(VpVs_in,P.tolist(),Table)
+        #Vp_out.append(vp)
+        #Vs_out.append(vs)
+        P_out.append(P_table)
+        Temperature_out.append(temp)
+        Density_out.append(dens)
+        Vs_out.append(vs)
+        Vp_out.append(vp)
+        diff_VpVs.append(((VpVs_in-vp/vs)/VpVs_in)*100)
+        melt_out.append(m)
+    ### pasting the outputs to the input tomo table
+    out=depth;
+    out=np.column_stack((out,P_out))
+    out=np.column_stack((out,Temperature_out))
+    out=np.column_stack((out,Density_out))
+    out=np.column_stack((out,Vp_out))
+    out=np.column_stack((out,Vs_out))
+    out=np.column_stack((out,diff_VpVs))
     out=np.column_stack((out,melt_out))
 
     return out
@@ -1045,6 +1209,14 @@ def T_P_prop_out(depth,T,Table):
     return out
 
 def vel_to_temp_P_in(depth,Vs,Table,P_func):
+    '''
+    Input:
+    depth : depth column in km.
+    Vs    : tomography Vs velocity in km/s.
+    Table : Perplex lookup table corrected form anelasticity and melt effects.
+    P_func : function that returns pressure at a given depth in km.
+    Output: Output: [depth,P_out,Temperature_out,Density_out,diff_Vs)       
+    '''
     Temperature_out = []#np.zeros_like(tomo[:,1])
     Density_out     = []#np.zeros_like(tomo[:,1])
     diff_Vs         = []
@@ -1070,6 +1242,20 @@ def vel_to_temp_P_in(depth,Vs,Table,P_func):
 
     return out
 def vel_to_temp_AHCZ(tomo,geo_func,moho_func,mc_func,uc_func,sedi_func,Crust_LC_use,Crust_MC_use,Crust_UC_use,Sediments_use,DMM_use,Archon_use,Proton_use,Tecton_use,Ocean_use):
+    '''
+    Input:
+    tomo : tomography table with columns [lat,lon,depth(km),Vs(km/s)]
+    geo_func : function that returns the composition code at a lat,lon point
+    moho_func : function that returns the moho depth at a lat,lon point 
+    mc_func : function that returns the mid crust depth at a lat,lon point
+    uc_func : function that returns the upper crust depth at a lat,lon point
+    sedi_func : function that returns the sediment thickness at a lat,lon point
+    Crust_LC_use : perplex table for lower crust
+    Crust_MC_use : perplex table for mid crust
+    Crust_UC_use : perplex table for upper crust
+    Sediments_use : perplex table for sediments
+    DMM_use : perplex table for DMM composition mantle        
+    '''             
     Temperature_out = []#np.zeros_like(tomo[:,1])
     Density_out     = []#np.zeros_like(tomo[:,1])
     melt_out     = [] #np.zeros_like(tomo[:,1])
@@ -1139,7 +1325,24 @@ def vel_to_temp_AHCZ(tomo,geo_func,moho_func,mc_func,uc_func,sedi_func,Crust_LC_
     out=np.column_stack((out,melt_out))
     return out
 def half_space_ocean(depth,Age,T_mantle,T_surface):
+    '''
+    depth : depth in km
+    Age   : age in million years
+    T_mantle : mantle temperature in oC
+    T_surface : surface temperature in oC
+    Output: Temperature at depth in oC
+    1D half space cooling model for oceanic lithosphere
+    Reference:
+    Turcotte and Schubert, Geodynamics, 2nd edition, 2002
+    Chapter 6: Thermal evolution of the lithosphere
+    Equation 6-9, page 153
+    1D temperature distribution as a function of depth and age
+    T(z,t) = T_surface + (T_mantle - T_surface) * erf( z / (2*sqrt(kappa*t)) )
+    where,
+    kappa = thermal diffusivity (m2/s)
+    z     = depth (m)             
+    '''
     kappa = 1e-6;
     SecYear = 3600*24*365.25
-    T = T_surface + (T_mantle-T_surface)*(math.erf(depth/(2*math.sqrt(kappa*Age*SecYear*1.0e6))))
+    T = T_surface + (T_mantle-T_surface)*(math.erf(depth*1e3/(2*math.sqrt(kappa*Age*SecYear*1.0e6))))
     return T
