@@ -231,6 +231,7 @@ def lookup_vs_P_accurate_prop_dev(vs,P,table):
         #print index, T_LitMod,P_LitMod
     return P_out,T,Dens,Vp,Vs,melt
 
+
 def lookup_vpvs_P_accurate_prop_dev(vpvs,P,table):
     '''
     This function looks up for the properties corresponsing to a Vp/vs and P pair.
