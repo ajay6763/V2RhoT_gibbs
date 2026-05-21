@@ -166,12 +166,12 @@ def lookup_vs_P_accurate_prop_dev(vs,P,table):
     up of down, difference between the observed and node velocity is minimum and
     take the average of the properties at the minimum L2 norm node and up or down node.
     '''
-    index=[];Vp=[];Vs=[];Dens=[];T=[];P_out=[];melt=[]
+    index=None #;Vp=[];Vs=[];Dens=[];T=[];P_out=[];melt=[]
     #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
     # Ditance
-    dist=np.array(((vs-table[:,4])**2+(P-table[:,1])**2)**0.5);
+    dist=((vs-table[:,4])**2+(P-table[:,1])**2)**0.5;
     index=dist.argmin(); #minimum index according to P-T grid
-    diff_vs=table[index,4] - vs # difference between tomography vs and the table vs
+    diff_vs=np.abs(table[index,4] - vs) # difference between tomography vs and the table vs
     # fetch the properties
     T=table[index,0]-273.0
     P_out=table[index,1]
@@ -181,11 +181,11 @@ def lookup_vs_P_accurate_prop_dev(vs,P,table):
     melt=table[index,5]
 
     ### treatment in case picked properties are off the tomography vs
-    if diff_vs==0: # in case of bulls eye hit
+    if np.isclose(diff_vs, 0.0): # in case of bulls eye hit
         pass
     else: # in case of no bulls eye hit
         if index==0: # in case at the start of the table
-            diff_vs_down=table[index+1,4] - vs # velocity difference in the next node
+            diff_vs_down=np.abs(table[index+1,4] - vs) # velocity difference in the next node
             if diff_vs_down<diff_vs: # check if the difference in the next node is less
                 T=-273.0+(table[index,0]+table[index+1,0])/2
                 P_out=(table[index,1]+table[index+1,1])/2
@@ -195,8 +195,8 @@ def lookup_vs_P_accurate_prop_dev(vs,P,table):
                 melt=(table[index,5]+table[index+1,5])/2
             else:
                 pass
-        elif index==table.shape[0]-1: # in case at the end of the table
-            diff_vs_up=table[index-1,4] - vs # velocity difference in the previous node
+        elif index==len(table)-1: #table.shape[0]-1: # in case at the end of the table
+            diff_vs_up=np.abs(table[index-1,4] - vs) # velocity difference in the previous node
             if diff_vs_up<diff_vs: # check if the difference in the previouse node is less
                 T=-273.0+(table[index,0]+table[index-1,0])/2
                 P_out=(table[index,1]+table[index-1,1])/2
@@ -207,8 +207,8 @@ def lookup_vs_P_accurate_prop_dev(vs,P,table):
             else:
                 pass
         else: # in case at the middle of the table
-            diff_vs_up=table[index-1,4] - vs # velocity difference in the previous node
-            diff_vs_down=table[index+1,4] - vs # velocity difference in the next node
+            diff_vs_up=np.abs(table[index-1,4] - vs) # velocity difference in the previous node
+            diff_vs_down=np.abs(table[index+1,4] - vs) # velocity difference in the next node
             if diff_vs_up<diff_vs_down: # check if the difference in the previouse node is less than in the next node
                 T=-273.0+(table[index,0]+table[index-1,0])/2
                 P_out=(table[index,1]+table[index-1,1])/2
@@ -224,8 +224,10 @@ def lookup_vs_P_accurate_prop_dev(vs,P,table):
                 Vs=(table[index,4]+table[index+1,4])/2
                 melt=(table[index,5]+table[index+1,5])/2
             else:
-                print('Something is wronge with input data and/or material table')
-                exit()
+                #print('Something is wronge with input data and/or material table')
+                #exit()
+                pass
+                
         #print index, T_LitMod,P_LitMod
     return P_out,T,Dens,Vp,Vs,melt
 
@@ -252,7 +254,7 @@ def lookup_vpvs_P_accurate_prop_dev(vpvs,P,table):
     vp_vs_table=table[:,4]/table[:,3]
     dist=np.array(((vpvs-table[:,4]/table[:,3])**2+(P-table[:,1])**2)**0.5);
     index=dist.argmin(); #minimum index according to P-T grid
-    diff_vpvs=vp_vs_table[index] - vpvs # difference between tomography vs and the table vs
+    diff_vpvs=np.abs(vp_vs_table[index] - vpvs) # difference between tomography vs and the table vs
     # fetch the properties
     T=table[index,0]-273.0
     P_out=table[index,1]
@@ -262,11 +264,11 @@ def lookup_vpvs_P_accurate_prop_dev(vpvs,P,table):
     melt=table[index,5]
 
     ### treatment in case picked properties are off the tomography vs
-    if diff_vpvs==0: # in case of bulls eye hit
+    if np.isclose(diff_vpvs, 0.0): # in case of bulls eye hit
         pass
     else: # in case of no bulls eye hit
         if index==0: # in case at the start of the table
-            diff_vs_down=vp_vs_table[index+1] - vpvs # velocity difference in the next node
+            diff_vs_down=np.abs(vp_vs_table[index+1] - vpvs) # velocity difference in the next node
             if diff_vs_down<diff_vpvs: # check if the difference in the next node is less
                 T=-273.0+(table[index,0]+table[index+1,0])/2
                 P_out=(table[index,1]+table[index+1,1])/2
@@ -277,7 +279,7 @@ def lookup_vpvs_P_accurate_prop_dev(vpvs,P,table):
             else:
                 pass
         elif index==table.shape[0]-1: # in case at the end of the table
-            diff_vs_up=vp_vs_table[index-1]- vpvs # velocity difference in the previous node
+            diff_vs_up=np.abs(vp_vs_table[index-1]- vpvs) # velocity difference in the previous node
             if diff_vs_up<diff_vpvs: # check if the difference in the previouse node is less
                 T=-273.0+(table[index,0]+table[index-1,0])/2
                 P_out=(table[index,1]+table[index-1,1])/2
@@ -288,8 +290,8 @@ def lookup_vpvs_P_accurate_prop_dev(vpvs,P,table):
             else:
                 pass
         else: # in case at the middle of the table
-            diff_vs_up=vp_vs_table[index-1] - vpvs # velocity difference in the previous node
-            diff_vs_down=vp_vs_table[index+1] - vpvs # velocity difference in the next node
+            diff_vs_up=np.abs(vp_vs_table[index-1] - vpvs) # velocity difference in the previous node
+            diff_vs_down=np.abs(vp_vs_table[index+1] - vpvs) # velocity difference in the next node
             if diff_vs_up<diff_vs_down: # check if the difference in the previouse node is less than in the next node
                 T=-273.0+(table[index,0]+table[index-1,0])/2
                 P_out=(table[index,1]+table[index-1,1])/2
@@ -305,8 +307,9 @@ def lookup_vpvs_P_accurate_prop_dev(vpvs,P,table):
                 Vs=(table[index,4]+table[index+1,4])/2
                 melt=(table[index,5]+table[index+1,5])/2
             else:
-                print('Something is wronge with input data and/or material table')
-                exit()
+                pass
+                #print('Something is wronge with input data and/or material table')
+                #exit()
         #print index, T_LitMod,P_LitMod
     return P_out,T,Dens,Vp,Vs,melt
 def lookup_vp_P_accurate_prop_dev(vp,P,table):
@@ -326,12 +329,12 @@ def lookup_vp_P_accurate_prop_dev(vp,P,table):
     up of down, difference between the observed and node velocity is minimum and
     take the average of the properties at the minimum L2 norm node and up or down node.
     '''
-    index=[];Vp=[];Vs=[];Dens=[];T=[];P_out=[];melt=[]
+    index=None;Vp=None;Vs=None;Dens=None;T=None;P_out=None;melt=None
     #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
     # Ditance
-    dist=np.array(((vp-table[:,3])**2+(P-table[:,1])**2)**0.5);
+    dist=((vp-table[:,3])**2+(P-table[:,1])**2)**0.5;
     index=dist.argmin(); #minimum index according to P-T grid
-    diff_vp=table[index,3] - vp # difference between tomography vs and the table vs
+    diff_vp=np.abs(table[index,3] - vp) # difference between tomography vs and the table vs
     # fetch the properties
     T=table[index,0]-273.0
     P_out=table[index,1]
@@ -341,11 +344,11 @@ def lookup_vp_P_accurate_prop_dev(vp,P,table):
     melt=table[index,5]
 
     ### treatment in case picked properties are off the tomography vs
-    if diff_vp==0: # in case of bulls eye hit
+    if np.isclose(diff_vp, 0.0): # in case of bulls eye hit
         pass
     else: # in case of no bulls eye hit
         if index==0: # in case at the start of the table
-            diff_vp_down=table[index+1,3] - vp # velocity difference in the next node
+            diff_vp_down=np.abs(table[index+1,3] - vp) # velocity difference in the next node
             if diff_vp_down<diff_vp: # check if the difference in the next node is less
                 T=-273.0+(table[index,0]+table[index+1,0])/2
                 P_out=(table[index,1]+table[index+1,1])/2
@@ -356,7 +359,7 @@ def lookup_vp_P_accurate_prop_dev(vp,P,table):
             else:
                 pass
         elif index==table.shape[0]-1: # in case at the end of the table
-            diff_vp_up=table[index-1,3] - vp # velocity difference in the previous node
+            diff_vp_up=np.abs(table[index-1,3] - vp) # velocity difference in the previous node
             if diff_vp_up<diff_vp: # check if the difference in the previouse node is less
                 T=-273.0+(table[index,0]+table[index-1,0])/2
                 P_out=(table[index,1]+table[index-1,1])/2
@@ -367,8 +370,8 @@ def lookup_vp_P_accurate_prop_dev(vp,P,table):
             else:
                 pass
         else: # in case at the middle of the table
-            diff_vp_up=table[index-1,3] - vp # velocity difference in the previous node
-            diff_vp_down=table[index+1,3] - vp # velocity difference in the next node
+            diff_vp_up=np.abs(table[index-1,3] - vp) # velocity difference in the previous node
+            diff_vp_down=np.abs(table[index+1,3] - vp) # velocity difference in the next node
             if diff_vp_up<diff_vp_down: # check if the difference in the previouse node is less than in the next node
                 T=-273.0+(table[index,0]+table[index-1,0])/2
                 P_out=(table[index,1]+table[index-1,1])/2
@@ -384,8 +387,9 @@ def lookup_vp_P_accurate_prop_dev(vp,P,table):
                 Vs=(table[index,4]+table[index+1,4])/2
                 melt=(table[index,5]+table[index+1,5])/2
             else:
-                print('Something is wronge with input data and/or material table')
-                exit()
+                pass
+                #print('Something is wronge with input data and/or material table')
+                #exit()
         #print index, T_LitMod,P_LitMod
     return P_out,T,Dens,Vp,Vs,melt
 def lookup_vs_P_accurate_prop(vs,P,table):
@@ -407,13 +411,13 @@ def lookup_vs_P_accurate_prop(vs,P,table):
     up of down, difference between the observed and node velocity is minimum and
     take the average of the properties at the minimum L2 norm node and up or down node.
     """
-    index=[]
-    Vp=[]
-    Vs=[]
-    Dens=[]
-    T=[]
-    P_out=[]
-    melt=[]
+    index=None
+    Vp=None
+    Vs=None
+    Dens=None
+    T=None
+    P_out=None
+    melt=None
     #dist=np.array((T[:]-T_LitMod)**2-( P[:]-P_LitMod)**2)
     dist=np.array(((vs-table[:,4])**2+(P-table[:,1])**2)**0.5);
     index=dist.argmin();
