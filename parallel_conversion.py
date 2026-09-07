@@ -171,11 +171,6 @@ def main(argv):
             print('Could not find input tomography file',inputdir+'/'+inputfile,'\nMake sure you have this file.')
             print('\n###########################################')
             sys.exit()
-
-        #tomo_in = np.loadtxt('./data_tomo/V_mean.txt',comments='#')
-
-        #print("Time spent on loading data: {:.2f} sec".format(time.time()-tcalc))
-
         # Load table
         try:
             DMM_no_atten = np.loadtxt(str(path)+'/databases/'+str(materialfile),comments='#')
@@ -187,7 +182,7 @@ def main(argv):
                 table        = lib.mantle_melt_atten_correction_Behn2009(DMM_no_atten,grain_size,oscillation_period,COH_val)
             elif atten_model == 1:
                 print('Chose 1 Atten model.')
-                table        =  lib.mantle_melt_atten_correction(DMM_no_atten,grain_size,oscillation_period)
+                table        =  lib.mantle_melt_atten_correction_JF2010(DMM_no_atten,grain_size,oscillation_period)
             else:
                 print('You choose wronge attenuation model.Available options are 1 and 2 . For help run with -h option')
                 sys.exit()
