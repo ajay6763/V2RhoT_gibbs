@@ -107,7 +107,7 @@ def atten_correction_JF2010(T,P,Vp,Vs,oscill,grain_size,A=68,alfa=0.36,energy=29
     Vs_correc = Vs*(1.0-vs_correction)
     Vp_correc = Vp*(1.0-vp_correction)
     return Vp_correc,Vs_correc
-def atten_correction_Behn2009(T,P,Vp,Vs,oscill,d,COH,rQ=1.0):
+def atten_correction_Behn2009(T,P,Vp,Vs,oscill,d,COH,rQ=1.2):
     '''
     Behn et al., 2009 https://doi.org/10.1016/j.epsl.2009.03.014
     Input:
