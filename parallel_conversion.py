@@ -177,20 +177,21 @@ def main(argv):
             #print('dwerwerwerwer')
             #print(atten_model)
             #table        = lib.mantle_melt_atten_correction(DMM_no_atten,grain_size,oscillation_period)
-            if atten_model == 2:
-                print('Chose 2 Atten model.')
-                table        = lib.mantle_melt_atten_correction_Behn2009(DMM_no_atten,grain_size,oscillation_period,COH_val)
-            elif atten_model == 1:
-                print('Chose 1 Atten model.')
-                table        =  lib.mantle_melt_atten_correction_JF2010(DMM_no_atten,grain_size,oscillation_period)
-            else:
-                print('You choose wronge attenuation model.Available options are 1 and 2 . For help run with -h option')
-                sys.exit()
         except:
             print('\n###########################################')
             print('Could not find the material file',str(path)+'/databases/'+str(materialfile),'\nMake sure you have this file.')
             sys.exit(0)
             print('\n###########################################')
+        if atten_model == 2:
+                print('Chose 2 Atten model.')
+                table        = lib.mantle_melt_atten_correction_Behn2009(DMM_no_atten,grain_size,oscillation_period,COH_val)
+        elif atten_model == 1:
+                print('Chose 1 Atten model.')
+                table        =  lib.mantle_melt_atten_correction_JF2010(DMM_no_atten,grain_size,oscillation_period)
+        else:
+                print('You choose wronge attenuation model.Available options are 1 and 2 . For help run with -h option')
+                sys.exit()
+
         
         print('\n###########################################')
         print("Time spent on loading data: {:.2f} sec".format((time.time()-systime)))

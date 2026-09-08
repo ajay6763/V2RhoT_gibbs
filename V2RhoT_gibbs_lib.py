@@ -73,7 +73,7 @@ def velocity_melt_correction_mantle_Hammond_Humphreys(T, P, Vp, Vs):
         melt_frac    = 0.
     return Vp_corrected,Vs_corrected, melt_frac*100.
 
-def atten_correction_JF2010(T,P,Vp,Vs,oscill,grain_size,A=68,alfa=0.36,energy=293e3,volexp=1.20e-5):
+def atten_correction_JF2010(T,P,Vp,Vs,oscill,grain_size,A=68,alpha=0.36,energy=293e3,volexp=1.20e-5):
     '''
     Jackson and Faul, 2010 and Kumar et al., 2020    
     Input:
@@ -87,7 +87,7 @@ def atten_correction_JF2010(T,P,Vp,Vs,oscill,grain_size,A=68,alfa=0.36,energy=29
     '''
     ## Parameters from Jackson and Faule 2010, Kumar et al., 2020
     #A = 68          # 𝑠^(−𝛼) 𝑚m^(−𝛼) Pre-exponential factor (for d in mm)
-    #alfa   = 0.34      #------------ frequency dependence
+    #alpha   = 0.34      #------------ frequency dependence
     #energy = 293e3  #------------ Activation energy
     #volexp = 1.20e-5  #------------ Activation volume
     R      = 8.314472  #------------ Gas constant
@@ -96,7 +96,7 @@ def atten_correction_JF2010(T,P,Vp,Vs,oscill,grain_size,A=68,alfa=0.36,energy=29
     #################################################
     ## calculating Qp and Qs
     parexp    = math.exp((-(energy+(volexp*P)))/(R*(T)))
-    Qs_inv   = A*(((oscill*(1.0/(grain_size)))*parexp))**alfa
+    Qs_inv   = A*(((oscill*(1.0/(grain_size)))*parexp))**alpha
     Qp        = (1/Qs_inv)*(9/4)
     Qs        = 1/Qs_inv
     vs_correction    = ((1.0/math.tan((pi*alpha)/2.0))*Qs_inv)*0.5
@@ -120,7 +120,7 @@ def atten_correction_Behn2009(T,P,Vp,Vs,oscill,d,COH,rQ=1.2):
     rQ - default (1.2). to include effect of hydration on Qs^-1, rQ=1.2 for wet olivine and rQ=0 for dry olivine
     -- For diffusion creep it is 1.0 and for dislocation creep it is 1.2 cf. Behn et al., 2009 Table S1.
     Note: For anelastic attenuation pq=1 is used i.e., processes are at the grain-boundary so not really diffusion.
-    for the dislocation grain size exponent is =0 then rQ=1.2 if apt. But it is assumed that the effect of hfration in anelasticity scales similar to dislocation creep.
+    for the dislocation grain size exponent is =0 then rQ=1.2 is apt. But it is assumed that the effect of hydration in anelasticity scales similar to dislocation creep (wistful).
     Parameters are also taken from https://github.com/wshinevar/WISTFUL/blob/main/behn2009Shear.m
     Output:
     '''
@@ -137,7 +137,7 @@ def atten_correction_Behn2009(T,P,Vp,Vs,oscill,d,COH,rQ=1.2):
     VQ          =   1.2e-5  #activation volume
     Bo          =   1.28e8  # prefactor for Q for omega=0.122 s^-1
     PQ_ref      =   300e6 # reference pressure in Pa;
-    #Hyfration effect
+    #Hydration effect
     COH_ref     =   50      # H/10^6 Si
     # CR. for rQ: Shinevar et al., 2014, https://doi.org/10.1029/2022GC010329
     alpha       =   0.27
