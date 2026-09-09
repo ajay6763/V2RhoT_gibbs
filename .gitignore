@@ -1,1 +1,21 @@
-**/.ipynb_checkpoints
+# 1. Ignore everything by default
+*
+
+# 2. Allow directory traversal (required so Git can look inside folders)
+!*/
+
+# 3. Track only specific file extensions globally
+!*.ipynb
+!*.py
+
+# 4. Explicitly track your selected folders
+# (Replace 'folder_name_1' and 'folder_name_2' with your actual folder names)
+!data_tomo/
+!data_tomo/
+
+# 5. Ignore standard Jupyter/Python overhead inside your tracked folders
+**/__pycache__/
+**/.ipynb_checkpoints/
+**/.virtualenv/
+**/.venv/
+**/.env/
