@@ -19,3 +19,7 @@
 **/.virtualenv/
 **/.venv/
 **/.env/
+
+# 6. Ignore old lib and performance notebook
+V2RhoT_gibbs_lib_old.py
+performance_comparison.ipynb
