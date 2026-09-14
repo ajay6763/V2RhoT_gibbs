@@ -212,7 +212,7 @@ def vel_vs_to_temp_prop_out(depth,Vs,Table):
     Vs    : tomography Vs velocity in km/s.
     Table : Perplex lookup table corrected form anelasticity and melt effects.
 
-    Output: Output: [depth,P_out,Temperature_out,Density_out,Vp_out,Vs_out,diff_Vp,melt_out)
+    Output: Output: [depth,P_out,Temperature_out,Density_out,Vp_out,Vs_out,diff_Vs(%),melt_out(%)]
     '''
     n_pts = len(depth)
     Temperature_out = np.zeros(n_pts)
@@ -242,6 +242,105 @@ def vel_vs_to_temp_prop_out(depth,Vs,Table):
     out = np.column_stack((depth, P_out, Temperature_out, Density_out, Vp_out, Vs_out, diff_Vs, melt_out))
     return out
 
+
+
+
+def lookup_vp_P_accurate(vp_obs, P_obs, table, P_values=None):
+    """
+    Lookup/interpolate T and properties from a Perple_X P-T table
+    using an isobaric slice and 1D Vs inversion.
+    """
+    # 1. Isobaric Lock: Find closest pressure level
+    if P_values is None:
+        P_values = np.unique(table[:, 1])
+    P_closest = P_values[np.argmin(np.abs(P_values - P_obs))]
+
+    # Extract and sort slice by Temperature
+    mask = np.isclose(table[:, 1], P_closest)
+    sub = table[mask]
+    sub = sub[np.argsort(sub[:, 0])]
+
+    T_grid = sub[:, 0]
+    Vp_grid = sub[:, 3]
+
+    # Evaluate matching conditions
+    exact = np.isclose(Vp_grid, vp_obs)
+    diff = Vp_grid - vp_obs
+    crossing = np.where(diff[:-1] * diff[1:] <= 0)[0]
+
+    # 2. Branch selection to compute property outputs
+    if np.any(exact):
+        i = np.where(exact)[0][0]
+        P_out = sub[i, 1]
+        T_celsius = sub[i, 0] - 273.15
+        Dens = sub[i, 2]
+        Vp_out = sub[i, 3]
+        Vs = sub[i, 4]
+        melt = sub[i, 5]
+
+    elif len(crossing) > 0:
+        i = crossing[0]
+        T1, T2 = T_grid[i], T_grid[i+1]
+        Vp1, Vp2 = Vp_grid[i], Vp_grid[i+1]
+
+        denom = (Vp2 - Vp1) if Vp2 != Vp1 else 1.0
+        w = (vp_obs - Vp1) / denom
+
+        P_out = P_closest
+        T_celsius = (T1 + w * (T2 - T1)) - 273.15
+        Dens = sub[i, 2] + w * (sub[i+1, 2] - sub[i, 2])
+        Vs = sub[i, 4] + w * (sub[i+1, 4] - sub[i, 4])
+        Vp_out = vp_obs
+        melt = sub[i, 5] + w * (sub[i+1, 5] - sub[i, 5])
+
+    else:
+        # Out-of-bounds fallback (clamps to nearest edge)
+        i = np.argmin(np.abs(Vp_grid - vp_obs))
+        P_out = sub[i, 1]
+        T_celsius = sub[i, 0] - 273.15
+        Dens = sub[i, 2]
+        Vs = sub[i, 4]
+        Vp_out = sub[i, 3]
+        melt = sub[i, 5]
+
+    return P_out, T_celsius, Dens, Vp_out, Vs, melt
+
+def vel_vp_to_temp_prop_out(depth,Vp,Table):
+    '''
+    Input:
+    depth : depth column in km.
+    Vp    : tomography Vp velocity in km/s.
+    Table : Perplex lookup table corrected form anelasticity and melt effects.
+
+    Output: Output: [depth,P_out,Temperature_out,Density_out,Vp_out,Vs_out,diff_Vp(%),melt_out(%)]
+    '''
+    n_pts = len(depth)
+    Temperature_out = np.zeros(n_pts)
+    Density_out     = np.zeros(n_pts)
+    melt_out        = np.zeros(n_pts)
+    Vp_out          = np.zeros(n_pts)
+    Vs_out          = np.zeros(n_pts)
+    diff_Vp         = np.zeros(n_pts)
+    P_out           = np.zeros(n_pts)
+
+    P_array  = pressure_inter(depth)
+    P_values = np.unique(Table[:, 1])
+
+    for i in range(n_pts):
+        P  = P_array[i]
+        Vp_in = Vp[i]
+        P_table,temp,dens,vp,vs,m = lookup_vp_P_accurate(Vp_in, P.tolist(), Table, P_values=P_values)
+        P_out[i] = P_table
+        Temperature_out[i] = temp
+        Density_out[i] = dens
+        Vs_out[i] = vs
+        Vp_out[i] = vp
+        diff_Vp[i] = ((Vp_in - vp) / Vp_in * 100.0) if not np.isclose(Vp_in, 0.0) else 0.0
+        melt_out[i] = m
+
+    ### pasting the outputs to the input tomo table
+    out = np.column_stack((depth, P_out, Temperature_out, Density_out, Vp_out, Vs_out, diff_Vp, melt_out))
+    return out
 
 def mantle_melt_atten_correction_JF2010(Table,grain_size,oscillation):
     Table_atten_corrected = np.copy(Table)
