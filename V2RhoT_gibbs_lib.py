@@ -29,16 +29,6 @@ pressure_inter = interpolate.interp1d(ak135[:,0],pressure_int)
 
 
 ## melt fraction - mantle
-def melt_frac_mantle_Hirschmann(T,P):
-    """
-    Hirschmann, 2000 and Winter, 2010
-    P in GPa
-    T in oC
-    """
-    T_s_m = 1080.0 + 134.2*P - 6.581*P**2 + 0.1054*P**3
-    T_l_m = 1762.0 + 57.46*P  - 3.487*P**2 + 0.077*P**3
-    melt  = (T - T_s_m)/(T_l_m - T_s_m)
-    return melt
 def melt_frac_mantle_Hirschmann(T, P):
     """
     Hirschmann, 2000 and Winter, 2010
@@ -62,16 +52,15 @@ def velocity_melt_correction_mantle_Hammond_Humphreys(T, P, Vp, Vs):
     #########################
     # Vs:   -5.3 = dlnVs/melt_frac => dlnVs = -5.3 * melt_frac
     # Vp:   -2.4 = dlnVp/melt_frac => dlnVp = -2.4 * melt_frac
-    if melt_frac > 0:
-        dVs = -5.3 * melt_frac
-        dVp = -2.4 * melt_frac
-        Vs_corrected = Vs*np.exp(dVs)
-        Vp_corrected = Vp*np.exp(dVp)
-    else:
-        Vp_corrected = Vp
-        Vs_corrected = Vs
-        melt_frac    = 0.
-    return Vp_corrected,Vs_corrected, melt_frac*100.
+    
+    melt_frac = np.maximum(melt_frac, 0.0)
+    dVs = -5.3 * melt_frac
+    dVp = -2.4 * melt_frac
+    
+    Vs_corrected = Vs * np.exp(dVs)
+    Vp_corrected = Vp * np.exp(dVp)
+    
+    return Vp_corrected, Vs_corrected, melt_frac * 100.
 
 def atten_correction_JF2010(T,P,Vp,Vs,oscill,grain_size,A=68,alpha=0.36,energy=293e3,volexp=1.20e-5):
     '''
@@ -95,13 +84,13 @@ def atten_correction_JF2010(T,P,Vp,Vs,oscill,grain_size,A=68,alpha=0.36,energy=2
 
     #################################################
     ## calculating Qp and Qs
-    parexp    = math.exp((-(energy+(volexp*P)))/(R*(T)))
+    parexp    = np.exp((-(energy+(volexp*P)))/(R*(T)))
     Qs_inv   = A*(((oscill*(1.0/(grain_size)))*parexp))**alpha
     Qp        = (1/Qs_inv)*(9/4)
     Qs        = 1/Qs_inv
-    vs_correction    = ((1.0/math.tan((pi*alpha)/2.0))*Qs_inv)*0.5
+    vs_correction    = ((1.0/np.tan((pi*alpha)/2.0))*Qs_inv)*0.5
     # assuming Qp=9/4*Qs, then Qp^-1=4/9*Qs^-1 (i.e., bulk attenuation is negligible)
-    vp_correction    = ((1.0/math.tan((pi*alpha)/2.0))*Qs_inv)*(2.0/9.0)
+    vp_correction    = ((1.0/np.tan((pi*alpha)/2.0))*Qs_inv)*(2.0/9.0)
     #################################################
     ## correcting velocities
     Vs_correc = Vs*(1.0-vs_correction)
@@ -142,27 +131,28 @@ def atten_correction_Behn2009(T,P,Vp,Vs,oscill,d,COH,rQ=1.2):
     # CR. for rQ: Shinevar et al., 2014, https://doi.org/10.1029/2022GC010329
     alpha       =   0.27
     # Calulate the pre-exponentail factor B based on the given parameters
-    B = Bo*d_ref**(pq-pq_ref)*(COH/COH_ref)**rQ*math.exp(((EQ+PQ_ref*VQ)-(EQ_ref+PQ_ref*VQ_ref))/(R*TQ_ref))
+    B = Bo*d_ref**(pq-pq_ref)*(COH/COH_ref)**rQ*np.exp(((EQ+PQ_ref*VQ)-(EQ_ref+PQ_ref*VQ_ref))/(R*TQ_ref))
     # Inverse of Anelastic factor Qs^-1
-    Qs_inv = (B * d**(-1 * pq) / frequency * math.exp(-(EQ + P * VQ) / (R * T)))**alpha 
+    Qs_inv = (B * d**(-1 * pq) / frequency * np.exp(-(EQ + P * VQ) / (R * T)))**alpha 
     Qp        = (1/Qs_inv)*(9/4)
     Qs        = 1/Qs_inv
-    vs_correction    = ((1.0/math.tan((pi*alpha)/2.0))*Qs_inv)*0.5
+    vs_correction    = ((1.0/np.tan((pi*alpha)/2.0))*Qs_inv)*0.5
     # assuming Qp=9/4*Qs, then Qp^-1=4/9*Qs^-1 (i.e., bulk attenuation is negligible)
-    vp_correction    = ((1.0/math.tan((pi*alpha)/2.0))*Qs_inv)*(2.0/9.0)
+    vp_correction    = ((1.0/np.tan((pi*alpha)/2.0))*Qs_inv)*(2.0/9.0)
     #################################################
     ## correcting velocities
     Vs_correc = Vs*(1.0-vs_correction)
     Vp_correc = Vp*(1.0-vp_correction)
     return Vp_correc,Vs_correc
 
-def lookup_vs_P_accurate(vs_obs, P_obs, table, P_tol=None):
+def lookup_vs_P_accurate(vs_obs, P_obs, table, P_values=None):
     """
     Lookup/interpolate T and properties from a Perple_X P-T table
     using an isobaric slice and 1D Vs inversion.
     """
     # 1. Isobaric Lock: Find closest pressure level
-    P_values = np.unique(table[:, 1])
+    if P_values is None:
+        P_values = np.unique(table[:, 1])
     P_closest = P_values[np.argmin(np.abs(P_values - P_obs))]
 
     # Extract and sort slice by Temperature
@@ -224,68 +214,69 @@ def vel_vs_to_temp_prop_out(depth,Vs,Table):
 
     Output: Output: [depth,P_out,Temperature_out,Density_out,Vp_out,Vs_out,diff_Vp,melt_out)
     '''
-    Temperature_out = []#np.zeros_like(tomo[:,1])
-    Density_out     = []#np.zeros_like(tomo[:,1])
-    melt_out     = [] #np.zeros_like(tomo[:,1])
-    Vp_out     = [] #np.zeros_like(tomo[:,1])
-    Vs_out     = [] #np.zeros_like(tomo[:,1])
-    diff_Vs         = []
-    P_out           = []
-    #Vp_out          = []#np.zeros_like(tomo[:,1])
-    #Vs_out          = []#np.zeros_like(tomo[:,1])
-    for i in range(len(depth)):
-        P  = pressure_inter(depth[i])
+    n_pts = len(depth)
+    Temperature_out = np.zeros(n_pts)
+    Density_out     = np.zeros(n_pts)
+    melt_out        = np.zeros(n_pts)
+    Vp_out          = np.zeros(n_pts)
+    Vs_out          = np.zeros(n_pts)
+    diff_Vs         = np.zeros(n_pts)
+    P_out           = np.zeros(n_pts)
+
+    P_array  = pressure_inter(depth)
+    P_values = np.unique(Table[:, 1])
+
+    for i in range(n_pts):
+        P  = P_array[i]
         Vs_in = Vs[i]
-        P_table,temp,dens,vp,vs,m=lookup_vs_P_accurate(Vs_in,P.tolist(),Table)
-        #Vp_out.append(vp)
-        #Vs_out.append(vs)
-        P_out.append(P_table)
-        Temperature_out.append(temp)
-        Density_out.append(dens)
-        Vs_out.append(vs)
-        Vp_out.append(vp)
-        #diff_Vs.append(((Vs_in-vs)/Vs_in)*100)
-        diff_Vs.append(((Vs_in - vs) / Vs_in * 100.0) if not np.isclose(Vs_in, 0.0) else 0.0)
-        melt_out.append(m)
+        P_table,temp,dens,vp,vs,m = lookup_vs_P_accurate(Vs_in, P.tolist(), Table, P_values=P_values)
+        P_out[i] = P_table
+        Temperature_out[i] = temp
+        Density_out[i] = dens
+        Vs_out[i] = vs
+        Vp_out[i] = vp
+        diff_Vs[i] = ((Vs_in - vs) / Vs_in * 100.0) if not np.isclose(Vs_in, 0.0) else 0.0
+        melt_out[i] = m
+
     ### pasting the outputs to the input tomo table
-    out=depth;
-    out=np.column_stack((out,P_out))
-    out=np.column_stack((out,Temperature_out))
-    out=np.column_stack((out,Density_out))
-    out=np.column_stack((out,Vp_out))
-    out=np.column_stack((out,Vs_out))
-    out=np.column_stack((out,diff_Vs))
-    out=np.column_stack((out,melt_out))
+    out = np.column_stack((depth, P_out, Temperature_out, Density_out, Vp_out, Vs_out, diff_Vs, melt_out))
     return out
 
 
 def mantle_melt_atten_correction_JF2010(Table,grain_size,oscillation):
     Table_atten_corrected = np.copy(Table)
-    #for i in range(len(Table_atten_corrected)):
-    #    Table_atten_corrected[i,3],Table_atten_corrected[i,4] = atten_correction_J_2002(Table_atten_corrected[i,0],Table_atten_corrected[i,1]*1e5,
-    #                                                         Table_atten_corrected[i,3],Table_atten_corrected[i,4],oscillation,grain_size)
-    for i in range(len(Table_atten_corrected)):
-        Table_atten_corrected[i,3],Table_atten_corrected[i,4] = atten_correction_JF2010(Table_atten_corrected[i,0],Table_atten_corrected[i,1]*1e5,
-                                                             Table_atten_corrected[i,3],Table_atten_corrected[i,4],oscillation,grain_size)
+    
+    Table_atten_corrected[:, 3], Table_atten_corrected[:, 4] = atten_correction_JF2010(
+        Table_atten_corrected[:, 0], Table_atten_corrected[:, 1] * 1e5,
+        Table_atten_corrected[:, 3], Table_atten_corrected[:, 4], oscillation, grain_size
+    )
+    
     Table_atten_melt_corrected = np.copy(Table_atten_corrected)
-    melt = np.zeros_like(Table_atten_melt_corrected[:,0])
-    for i in range(len(Table_atten_melt_corrected)):
-        Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4],melt[i] = velocity_melt_correction_mantle_Hammond_Humphreys(Table_atten_melt_corrected[i,0]-273.15,
-                                                                                                 Table_atten_melt_corrected[i,1]/1e4,
-                                                                 Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4])
-    Table_atten_melt_corrected[:,5]=melt[:]
+    
+    Table_atten_melt_corrected[:, 3], Table_atten_melt_corrected[:, 4], melt = velocity_melt_correction_mantle_Hammond_Humphreys(
+        Table_atten_melt_corrected[:, 0] - 273.15,
+        Table_atten_melt_corrected[:, 1] / 1e4,
+        Table_atten_melt_corrected[:, 3], Table_atten_melt_corrected[:, 4]
+    )
+    
+    Table_atten_melt_corrected[:, 5] = melt
     return Table_atten_melt_corrected
 
 def mantle_melt_atten_correction_Behn2009(Table,grain_size,oscillation,COH):
     Table_atten_corrected = np.copy(Table)
-    for i in range(len(Table_atten_corrected)):
-        Table_atten_corrected[i,3],Table_atten_corrected[i,4] = atten_correction_Behn2009(Table_atten_corrected[i,0],Table_atten_corrected[i,1]*1e5,
-                                                             Table_atten_corrected[i,3],Table_atten_corrected[i,4],oscillation,grain_size/1e3,COH)
+    
+    Table_atten_corrected[:, 3], Table_atten_corrected[:, 4] = atten_correction_Behn2009(
+        Table_atten_corrected[:, 0], Table_atten_corrected[:, 1] * 1e5,
+        Table_atten_corrected[:, 3], Table_atten_corrected[:, 4], oscillation, grain_size / 1e3, COH
+    )
+    
     Table_atten_melt_corrected = np.copy(Table_atten_corrected)
-    melt = np.zeros_like(Table_atten_melt_corrected[:,0])
-    for i in range(len(Table_atten_melt_corrected)):
-        Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4],melt[i] = velocity_melt_correction_mantle_Hammond_Humphreys(Table_atten_melt_corrected[i,0]-273.15,
-                                                                                                 Table_atten_melt_corrected[i,1]/1e4,
-                                                                 Table_atten_melt_corrected[i,3],Table_atten_melt_corrected[i,4])
-    Table_atten_melt_corrected[:,5]=melt[:]
+    
+    Table_atten_melt_corrected[:, 3], Table_atten_melt_corrected[:, 4], melt = velocity_melt_correction_mantle_Hammond_Humphreys(
+        Table_atten_melt_corrected[:, 0] - 273.15,
+        Table_atten_melt_corrected[:, 1] / 1e4,
+        Table_atten_melt_corrected[:, 3], Table_atten_melt_corrected[:, 4]
+    )
+    
+    Table_atten_melt_corrected[:, 5] = melt
     return Table_atten_melt_corrected
